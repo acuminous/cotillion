@@ -1,4 +1,4 @@
-const { deepEqual: deq, equal: eq, notEqual: notEq, ok } = require('node:assert/strict');
+const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/strict');
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
 const { createSystem } = require('../../lib');
@@ -88,7 +88,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .then('the two starts resolve to different start values', async ({ world }) => {
     const [first, second] = await startValues(world);
-    notEq(first, second);
+    neq(first, second);
   })
   .then('the recorded events are:\n$events', ({ world }, expected) => {
     deq(world.eventRecorder.trace(columnsOf(expected)), expected);
