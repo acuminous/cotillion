@@ -74,9 +74,7 @@ All notable changes to cotillion are documented here. The format follows
   wants to log. Cotillion still never calls a stop function for a component which did not
   start, because a stop function is written against what its start created. Every listener receives one payload object, `{ name }` plus `error` or
   `reason` where the table says so. The events are notifications: a system with no listeners
-  starts, stops and rejects exactly as before. The `timeout` and `abort` reasons, and the
-  `component_start_aborted` and `component_stop_aborted` events, are documented but not yet
-  emitted.
+  starts, stops and rejects exactly as before.
 
 - A system announces each operation as a whole (#7), so exit handling has something to listen
   to: `system_start_failed` and `system_stop_failed` join the initiated and succeeded events
@@ -110,14 +108,32 @@ All notable changes to cotillion are documented here. The format follows
   rejects with, the components not yet reached are skipped with the reason `timeout`, and the
   operation rejects with a `TimeoutError`, cotillion's own exported class, whose message names
   the operation, the timeout and the component it was waiting for. A restart's timeout spans
-  the stop and the start, so whatever the stop leaves unspent bounds the start. For now the
-  timed-out component is cut away the moment the timeout expires and announced as
-  `component_start_aborted` or `component_stop_aborted` with the reason `timeout`; waiting for
-  it to wind down, and the abort timeout which bounds that wait, arrive with `abort()` (#10). A
+  the stop and the start, so whatever the stop leaves unspent bounds the start. The interrupted component is
+  given the chance to wind down before the operation rejects, described under `abort()` (#10). A
   component cut away while starting is treated as started, so the next `stop()` attempts to
   stop it, and one cut away while stopping is still standing, so the next `stop()` tries it
   again. A `start()` or `stop()` which joins an operation already in flight joins it under the
   timeout that operation was given, and its own is ignored.
+
+- `system.abort()` gives up on the operation in progress (#10). The in-flight component's
+  AbortSignal fires, the components not yet reached are skipped with the reason `abort`, and once
+  the in-flight invocation has wound down the pending `start()`, `stop()` or `restart()` rejects
+  with an `AbortError`, cotillion's own exported class, whose message names the operation and the
+  component it was waiting for. Aborting is graceful: cotillion never makes a component stop, it
+  fires the signal and then waits for the invocation to settle, bounded by the component's
+  `abort` timeout where one is declared. A component which settles in time is announced as
+  `component_start_succeeded` or `component_start_failed` (or the stop equivalents) exactly as
+  if nothing had happened, and the operation still rejects; only a component cotillion cuts
+  away from without it settling is announced as `component_start_aborted` or
+  `component_stop_aborted`, with the reason `abort` or `timeout` according to what interrupted
+  the operation. A component with no abort timeout is waited on until it settles, or until
+  `abort()` is called again, which cuts away at once. The same wind-down now applies when an
+  overall timeout expires, so a timed-out component which finishes shortly afterwards gets its
+  ordinary event rather than an aborted one, and the operation rejects with its `TimeoutError`
+  once it has. A component cut away while starting is treated as started, so the next `stop()`
+  attempts to stop it; one cut away while stopping is still standing, so the next `stop()` tries
+  it again. Aborting when no operation is in progress does nothing, and never fires the signal of
+  an operation which has already finished.
 
 - The library's vocabulary now distinguishes a component from its definition (#15). A component
   is what a start function returns, the connected client or the listening server, and the

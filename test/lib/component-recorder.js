@@ -51,9 +51,20 @@ function createComponentRecorder() {
   function observeSignal(invocation) {
     const [signal] = invocation.args;
     if (!(signal instanceof AbortSignal)) return;
-    signal.addEventListener('abort', () => {
-      invocation.signal = { fired: true, reason: signal.reason };
+    invocation.signalFired = new Promise((resolve) => {
+      const fired = () => {
+        invocation.signal = { fired: true, reason: signal.reason };
+        resolve();
+      };
+      if (signal.aborted) return fired();
+      signal.addEventListener('abort', fired);
     });
+  }
+
+  function untilSignalFires() {
+    const inFlight = invocations.filter((invocation) => !invocation.settled && invocation.signalFired);
+    if (inFlight.length === 0) throw new Error('no invocation is in flight to receive a signal');
+    return Promise.race(inFlight.map((invocation) => invocation.signalFired));
   }
 
   function rejects(invocation) {
@@ -182,6 +193,7 @@ function createComponentRecorder() {
     stopArguments,
     startSignal,
     stopSignal,
+    untilSignalFires,
     sequence,
   };
 }

@@ -1,4 +1,5 @@
 import {
+  AbortError,
   ComponentEvent,
   type Components,
   type SkipReason,
@@ -20,6 +21,10 @@ const boundedRestart: Promise<Components> = system.restart({ timeout: 30000 });
 
 const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
 const timedOutName: 'TimeoutError' = timedOut instanceof TimeoutError ? timedOut.name : 'TimeoutError';
+
+system.abort();
+const abortError: Error = new AbortError('The stop was aborted while waiting for postgres to stop');
+const abortedName: 'AbortError' = abortError instanceof AbortError ? abortError.name : 'AbortError';
 
 system.on(SystemEvent.StopSucceeded, () => {});
 system.on(SystemEvent.StartFailed, (error) => error?.message);

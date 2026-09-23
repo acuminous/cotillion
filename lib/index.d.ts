@@ -59,10 +59,15 @@ export interface System {
   start(options?: OperationOptions): Promise<Components>;
   stop(options?: OperationOptions): Promise<void>;
   restart(options?: OperationOptions): Promise<Components>;
+  abort(): void;
 }
 
 export class TimeoutError extends Error {
   readonly name: 'TimeoutError';
+}
+
+export class AbortError extends Error {
+  readonly name: 'AbortError';
 }
 
 export function createSystem(definition: SystemDefinition): System;

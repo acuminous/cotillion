@@ -6,9 +6,11 @@ components not yet reached are skipped, and the operation rejects with a Timeout
 the component it was waiting for. Without a timeout an operation waits for as long as its
 components take.
 
-Cotillion does not yet wait for an interrupted component to wind down: the timed-out component
-is cut away the moment the timeout expires, and announced as aborted. The wind-down grace and
-its abort timeout belong to aborting.
+Expiry is not a cut-away. Cotillion waits for the interrupted component to wind down, bounded
+by the component's abort timeout where one is declared, and announces it as succeeded or
+failed if it settles in time. Only a component cotillion gives up on without it settling is
+announced as aborted. A component with no abort timeout is waited on until it settles, or
+until abort() cuts the wait short.
 
 ## Background:
 
@@ -21,7 +23,7 @@ its abort timeout belong to aborting.
 - Given the components postgres
 - And each component starts on demand
 - When the system starts
-- Then the system has not started
+- Then the start is still in progress
 - When postgres has started
 - Then the system has started
 - And postgres's start was given an abort signal which has not fired
@@ -33,7 +35,7 @@ its abort timeout belong to aborting.
 - And each component stops on demand
 - When the system is started
 - And the system stops
-- Then the system has not stopped
+- Then the stop is still in progress
 - When postgres has stopped
 - Then the system has stopped
 - And postgres's stop was given an abort signal which has not fired
@@ -44,8 +46,10 @@ its abort timeout belong to aborting.
 
 - Given the components postgres, emailListener, httpServer
 - And each component starts
-- And emailListener hangs while starting
+- And emailListener starts on demand
 - When the system starts with a timeout of 10ms
+- And the timeout has expired
+- And emailListener has started
 - Then the start is rejected with a TimeoutError "The start timed out after 10ms waiting for emailListener to start"
 - And the failed system start event carries that error
 - And emailListener's start was given an abort signal which has fired with that error
@@ -58,7 +62,7 @@ its abort timeout belong to aborting.
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
-  | component_start_aborted   | emailListener | timeout | name, reason |
+  | component_start_succeeded | emailListener |         | name         |
   | component_start_skipped   | httpServer    | timeout | name, reason |
   | system_start_failed       |               |         | error        |
 
@@ -67,9 +71,11 @@ its abort timeout belong to aborting.
 - Given the components postgres, emailListener, httpServer
 - And each component starts
 - And each component stops
-- And emailListener hangs while stopping
+- And emailListener stops on demand
 - When the system is started
 - And the system stops with a timeout of 10ms
+- And the timeout has expired
+- And emailListener has stopped
 - Then the stop is rejected with a TimeoutError "The stop timed out after 10ms waiting for emailListener to stop"
 - And the failed system stop event carries that error
 - And emailListener's stop was given an abort signal which has fired with that error
@@ -90,9 +96,54 @@ its abort timeout belong to aborting.
   | component_stop_initiated  | httpServer    |         | name         |
   | component_stop_succeeded  | httpServer    |         | name         |
   | component_stop_initiated  | emailListener |         | name         |
-  | component_stop_aborted    | emailListener | timeout | name, reason |
+  | component_stop_succeeded  | emailListener |         | name         |
   | component_stop_skipped    | postgres      | timeout | name, reason |
   | system_stop_failed        |               |         | error        |
+
+## Rule: A component which does not wind down after the timeout is cut away
+
+### Scenario: A component which does not wind down within its abort timeout
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And emailListener hangs while starting
+- And emailListener has an abort timeout of 10ms
+- When the system starts with a timeout of 10ms
+- Then the start is rejected with a TimeoutError "The start timed out after 10ms waiting for emailListener to start"
+- And emailListener's start was given an abort signal which has fired with that error
+- And the recorded events are:
+
+  | event                     | component     | reason  | payload      |
+  |---------------------------|---------------|---------|--------------|
+  | system_start_initiated    |               |         |              |
+  | component_start_initiated | postgres      |         | name         |
+  | component_start_succeeded | postgres      |         | name         |
+  | component_start_initiated | emailListener |         | name         |
+  | component_start_aborted   | emailListener | timeout | name, reason |
+  | component_start_skipped   | httpServer    | timeout | name, reason |
+  | system_start_failed       |               |         | error        |
+
+### Scenario: Aborting cuts short the wait for a component with no abort timeout
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And emailListener hangs while starting
+- When the system starts with a timeout of 10ms
+- And the timeout has expired
+- Then the start is still in progress
+- When the system is aborted
+- Then the start is rejected with a TimeoutError "The start timed out after 10ms waiting for emailListener to start"
+- And the recorded events are:
+
+  | event                     | component     | reason  | payload      |
+  |---------------------------|---------------|---------|--------------|
+  | system_start_initiated    |               |         |              |
+  | component_start_initiated | postgres      |         | name         |
+  | component_start_succeeded | postgres      |         | name         |
+  | component_start_initiated | emailListener |         | name         |
+  | component_start_aborted   | emailListener | timeout | name, reason |
+  | component_start_skipped   | httpServer    | timeout | name, reason |
+  | system_start_failed       |               |         | error        |
 
 ## Rule: A component cut away while starting is treated as started
 
@@ -102,6 +153,7 @@ its abort timeout belong to aborting.
 - And each component starts
 - And each component stops
 - And emailListener hangs while starting
+- And emailListener has an abort timeout of 10ms
 - When the system starts with a timeout of 10ms
 - Then the start is rejected with a TimeoutError "The start timed out after 10ms waiting for emailListener to start"
 - When the system is stopped
@@ -141,6 +193,7 @@ its abort timeout belong to aborting.
 - And each component starts
 - And each component stops
 - And httpServer stops on demand
+- And httpServer has an abort timeout of 10ms
 - When the system is started
 - And the system stops with a timeout of 10ms
 - Then the stop is rejected with a TimeoutError "The stop timed out after 10ms waiting for httpServer to stop"
@@ -165,6 +218,7 @@ its abort timeout belong to aborting.
 - And each component starts
 - And each component stops
 - And httpServer hangs while stopping
+- And httpServer has an abort timeout of 10ms
 - When the system is started
 - And the system restarts with a timeout of 10ms
 - Then the restart is rejected with a TimeoutError "The restart timed out after 10ms waiting for httpServer to stop"
@@ -193,6 +247,8 @@ its abort timeout belong to aborting.
 - When the system starts
 - And postgres has started
 - And the system restarts with a timeout of 10ms
+- And the timeout has expired
+- And postgres has started
 - Then the restart is rejected with a TimeoutError "The restart timed out after 10ms waiting for postgres to start"
 - And postgres's start was given an abort signal which has fired with that error
 - And postgres's stop was given an abort signal which has fired with that error
@@ -210,5 +266,5 @@ its abort timeout belong to aborting.
   | system_stop_succeeded     |           |         |
   | system_start_initiated    |           |         |
   | component_start_initiated | postgres  |         |
-  | component_start_aborted   | postgres  | timeout |
+  | component_start_succeeded | postgres  |         |
   | system_start_failed       |           |         |
