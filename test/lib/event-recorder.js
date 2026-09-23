@@ -1,4 +1,5 @@
 const { ComponentEvent, SystemEvent } = require('../../lib');
+const { toStepDataRows } = require('./step-data-table');
 
 const documentedEventNames = Object.values(ComponentEvent).concat(Object.values(SystemEvent));
 
@@ -13,18 +14,10 @@ function createEventRecorder() {
   }
 
   function trace(columns) {
-    return recorded.map((entry) => project(entry, columns));
+    return toStepDataRows(recorded, columns);
   }
 
   return { record, trace };
-}
-
-function project(entry, columns) {
-  return columns.reduce((row, column) => Object.assign(row, { [column]: asCell(entry[column]) }), {});
-}
-
-function asCell(value) {
-  return value === undefined ? '' : String(value);
 }
 
 module.exports = { createEventRecorder };

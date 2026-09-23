@@ -39,15 +39,83 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - When httpServer has started
 - Then the system has started
 
-## Rule: Every start is given an abort signal
+## Rule: Components stop one at a time, in reverse start order
 
-### Scenario: The argument a start function receives
+### Scenario: Each component stops only once the one after it has
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And each component stops on demand
+- When the system is started
+- And the system stops
+- Then httpServer is stopping
+- And emailListener has not stopped
+- When httpServer has stopped
+- Then emailListener is stopping
+- And postgres has not stopped
+- When emailListener has stopped
+- Then postgres is stopping
+- When postgres has stopped
+- Then the system has stopped
+- And the recorded invocations are:
+
+  | lifecycle | component     |
+  |-----------|---------------|
+  | start     | postgres      |
+  | start     | emailListener |
+  | start     | httpServer    |
+  | stop      | httpServer    |
+  | stop      | emailListener |
+  | stop      | postgres      |
+
+### Scenario: A component with no stop function
+
+- Given the components postgres, migrate, httpServer
+- And each component starts
+- And each component stops
+- And migrate has no stop function
+- When the system is started
+- And the system is stopped
+- Then migrate has not stopped
+- And the recorded invocations are:
+
+  | lifecycle | component  |
+  |-----------|------------|
+  | start     | postgres   |
+  | start     | migrate    |
+  | start     | httpServer |
+  | stop      | httpServer |
+  | stop      | postgres   |
+
+### Scenario: A component with no start function is still stopped
+
+- Given the components postgres, migrate, httpServer
+- And each component starts
+- And each component stops
+- And migrate has no start function
+- When the system is started
+- And the system is stopped
+- Then migrate has not started
+- And migrate has stopped once
+
+## Rule: Every invocation is given an abort signal
+
+### Scenario: The argument a [lifecycle] function receives
 
 - Given the components postgres
-- And postgres starts with a connection
+- And each component starts
+- And each component stops
 - When the system is started
-- Then postgres was given an abort signal which has not been aborted
-- And postgres was given no other arguments
+- And the system is stopped
+- Then postgres's [lifecycle] was given an abort signal which has not been aborted
+- And postgres's [lifecycle] was given no other arguments
+
+### Examples:
+
+| lifecycle |
+|-----------|
+| start     |
+| stop      |
 
 ## Rule: The start values are keyed by component name
 
@@ -122,3 +190,138 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And the system is started
 - Then postgres has started twice
 - And the two starts resolve to different start values
+
+## Rule: Stopping is idempotent
+
+### Scenario: Stopping a system which has already stopped
+
+- Given the components postgres
+- And each component starts
+- And each component stops
+- When the system is started
+- And the system is stopped
+- And the system is stopped
+- Then postgres has stopped once
+- And the recorded events are:
+
+  | event                  |
+  |------------------------|
+  | system_start_initiated |
+  | system_start_succeeded |
+  | system_stop_initiated  |
+  | system_stop_succeeded  |
+
+### Scenario: Stopping a system which is already stopping
+
+- Given the components postgres
+- And each component starts
+- And each component stops on demand
+- When the system is started
+- And the system stops
+- And the system stops
+- When postgres has stopped
+- Then postgres has stopped once
+- And both stops resolve
+
+### Scenario: Stopping a system which was never started
+
+- Given the components postgres
+- And each component starts
+- And each component stops
+- When the system is stopped
+- Then postgres has not started
+- And postgres has not stopped
+- And the recorded events are:
+
+  | event                 |
+  |-----------------------|
+  | system_stop_initiated |
+  | system_stop_succeeded |
+
+## Rule: A stop which did not finish can be retried
+
+### Scenario: Stopping again after a stop which failed
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And each component stops on demand
+- When the system is started
+- And the system stops
+- And httpServer has stopped
+- And emailListener fails to stop
+- Then the stop is rejected
+- When the system stops
+- And emailListener has stopped
+- And postgres has stopped
+- Then the system has stopped
+- And the recorded invocations are:
+
+  | lifecycle | component     |
+  |-----------|---------------|
+  | start     | postgres      |
+  | start     | emailListener |
+  | start     | httpServer    |
+  | stop      | httpServer    |
+  | stop      | emailListener |
+  | stop      | emailListener |
+  | stop      | postgres      |
+
+## Rule: A stopped system can be started again
+
+### Scenario: Starting, stopping, starting and stopping again
+
+- Given the components postgres, httpServer
+- And each component starts
+- And each component stops
+- When the system is started
+- And the system is stopped
+- And the system is started
+- And the system is stopped
+- Then the recorded invocations are:
+
+  | lifecycle | component  |
+  |-----------|------------|
+  | start     | postgres   |
+  | start     | httpServer |
+  | stop      | httpServer |
+  | stop      | postgres   |
+  | start     | postgres   |
+  | start     | httpServer |
+  | stop      | httpServer |
+  | stop      | postgres   |
+
+## Rule: Restarting is a stop followed by a start
+
+### Scenario: Restarting a started system
+
+- Given the components postgres, httpServer
+- And each component starts
+- And each component stops
+- When the system is started
+- And the system is restarted
+- Then the two starts resolve to different start values
+- And the recorded invocations are:
+
+  | lifecycle | component  |
+  |-----------|------------|
+  | start     | postgres   |
+  | start     | httpServer |
+  | stop      | httpServer |
+  | stop      | postgres   |
+  | start     | postgres   |
+  | start     | httpServer |
+
+### Scenario: Restarting a system which was never started
+
+- Given the components postgres, httpServer
+- And each component starts
+- And each component stops
+- When the system is restarted
+- Then postgres has not stopped
+- And httpServer has not stopped
+- And the recorded invocations are:
+
+  | lifecycle | component  |
+  |-----------|------------|
+  | start     | postgres   |
+  | start     | httpServer |

@@ -11,6 +11,7 @@ const system: System = createSystem([]);
 
 const startValues: Promise<StartValues> = system.start();
 const stopped: Promise<void> = system.stop();
+const restarted: Promise<StartValues> = system.restart();
 
 system.on(SystemEvent.StopSucceeded, () => {});
 system.on(ComponentEvent.StartFailed, ({ name, error }) => `${name} ${error?.message}`);

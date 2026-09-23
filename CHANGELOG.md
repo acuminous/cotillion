@@ -34,6 +34,17 @@ All notable changes to cotillion are documented here. The format follows
   starts afresh. Components inside a parallel group are not started yet, and `stop()` still stops
   nothing, so only a flat array of components is worth starting so far.
 
+- `system.stop()` runs the stop functions of the components which started, one at a time, in the
+  reverse order they started, and resolves when the last has stopped (#4). A component with no
+  stop function is skipped, and each stop function is given an AbortSignal as its only argument,
+  which nothing fires yet. Stopping is idempotent in the same way starting is: stopping a stopped,
+  or never started, system has no effect and resolves immediately, and a stop requested while one
+  is in flight joins it rather than stopping the components twice. A stop which did not finish can
+  be retried, the next `stop()` picking up where the last left off and stopping only the components
+  still standing. `system.restart()` is a stop followed by a start, resolving to the fresh start
+  values, and restarting a stopped, or never started, system simply starts it. Neither operation
+  takes options yet, so nothing bounds how long a stop will wait.
+
 - Every event name the README documents is exported as a constant, `ComponentEvent` and
   `SystemEvent`, mirroring the two tables in the Events section (#1). Listeners can be
   registered with either a constant or the string literal, and both are typed. Only the four

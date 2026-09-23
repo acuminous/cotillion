@@ -54,6 +54,7 @@ export interface System {
   on(event: SystemEventName, listener: (error?: Error) => void): this;
   start(): Promise<StartValues>;
   stop(): Promise<void>;
+  restart(): Promise<StartValues>;
 }
 
 export function createSystem(components: ComponentTree): System;

@@ -1,4 +1,4 @@
-const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/strict');
+const { deepEqual: deq, equal: eq, notEqual: neq, ok, rejects } = require('node:assert/strict');
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
 const { createSystem } = require('../../lib');
@@ -15,10 +15,17 @@ const {
 
 const counts = { once: 1, twice: 2 };
 
+const argumentsOf = {
+  start: (recorder, name) => recorder.startArguments(name),
+  stop: (recorder, name) => recorder.stopArguments(name),
+};
+
 const dictionary = new Dictionary()
   .define('events', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('values', /([\s\S]+)/, async (text) => parseStepDataTable(text))
+  .define('invocations', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('component', /(\w+)/)
+  .define('lifecycle', /(start|stop)/)
   .define('value', /(.+)/)
   .define('count', /(once|twice)/, async (word) => counts[word]);
 
@@ -39,9 +46,21 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     // biome-ignore lint/performance/noDelete: the scenario needs the key absent, not present and undefined
     delete componentNamed(world.components, name).start;
   })
+  .given('$component has no stop function', ({ world }, name) => {
+    // biome-ignore lint/performance/noDelete: the scenario needs the key absent, not present and undefined
+    delete componentNamed(world.components, name).stop;
+  })
+  .given('each component starts', ({ world }) => {
+    eachComponent(world, (recorder, component) => recorder.starts(component));
+  })
+  .given('each component stops', ({ world }) => {
+    eachComponent(world, (recorder, component) => recorder.stops(component));
+  })
   .given('each component starts on demand', ({ world }) => {
-    const recorder = componentRecorderOf(world);
-    for (const component of world.components) recorder.startsOnDemand(component);
+    eachComponent(world, (recorder, component) => recorder.startsOnDemand(component));
+  })
+  .given('each component stops on demand', ({ world }) => {
+    eachComponent(world, (recorder, component) => recorder.stopsOnDemand(component));
   })
   .when('the system starts', ({ world }) => {
     trackStart(world, systemOf(world).start());
@@ -49,12 +68,26 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .when('the system is started', async ({ world }) => {
     await trackStart(world, systemOf(world).start());
   })
-  .when('$component has started', async ({ world }, name) => {
-    componentRecorderOf(world).release(name);
-    await setImmediate();
+  .when('the system stops', ({ world }) => {
+    trackStop(world, systemOf(world).stop());
   })
   .when('the system is stopped', async ({ world }) => {
-    await systemOf(world).stop();
+    await trackStop(world, systemOf(world).stop());
+  })
+  .when('the system is restarted', async ({ world }) => {
+    await trackStart(world, systemOf(world).restart());
+  })
+  .when('$component has started', async ({ world }, name) => {
+    componentRecorderOf(world).releaseStart(name);
+    await setImmediate();
+  })
+  .when('$component has stopped', async ({ world }, name) => {
+    componentRecorderOf(world).releaseStop(name);
+    await setImmediate();
+  })
+  .when('$component fails to stop', async ({ world }, name) => {
+    componentRecorderOf(world).failStop(name);
+    await setImmediate();
   })
   .then('the start values are empty', async ({ world }) => {
     deq(await lastStart(world).promise, {});
@@ -65,33 +98,58 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then('$component is starting', ({ world }, name) => {
     ok(componentRecorderOf(world).isStarting(name), `${name} is not starting`);
   })
+  .then('$component is stopping', ({ world }, name) => {
+    ok(componentRecorderOf(world).isStopping(name), `${name} is not stopping`);
+  })
   .then('$component has not started', ({ world }, name) => {
     eq(componentRecorderOf(world).startCount(name), 0);
+  })
+  .then('$component has not stopped', ({ world }, name) => {
+    eq(componentRecorderOf(world).stopCount(name), 0);
   })
   .then('$component has started $count', ({ world }, name, count) => {
     eq(componentRecorderOf(world).startCount(name), count);
   })
-  .then('$component was given an abort signal which has not been aborted', ({ world }, name) => {
-    const [signal] = componentRecorderOf(world).startArguments(name);
-    ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
-    eq(signal.aborted, false);
+  .then('$component has stopped $count', ({ world }, name, count) => {
+    eq(componentRecorderOf(world).stopCount(name), count);
   })
-  .then('$component was given no other arguments', ({ world }, name) => {
-    eq(componentRecorderOf(world).startArguments(name).length, 1);
+  .then(
+    "$component's $lifecycle was given an abort signal which has not been aborted",
+    ({ world }, name, lifecycle) => {
+      const [signal] = argumentsOf[lifecycle](componentRecorderOf(world), name);
+      ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
+      eq(signal.aborted, false);
+    },
+  )
+  .then("$component's $lifecycle was given no other arguments", ({ world }, name, lifecycle) => {
+    eq(argumentsOf[lifecycle](componentRecorderOf(world), name).length, 1);
   })
   .then('the system has started', ({ world }) => {
     ok(lastStart(world).settled, 'the start has not resolved');
   })
+  .then('the system has stopped', ({ world }) => {
+    ok(lastStop(world).settled, 'the stop has not resolved');
+  })
+  .then('the stop is rejected', async ({ world }) => {
+    await rejects(lastStop(world).promise);
+  })
   .then('both starts resolve to the same start values', async ({ world }) => {
-    const [first, second] = await startValues(world);
+    const [first, second] = await settlementsOf(world.starts);
     eq(first, second);
   })
   .then('the two starts resolve to different start values', async ({ world }) => {
-    const [first, second] = await startValues(world);
+    const [first, second] = await settlementsOf(world.starts);
     neq(first, second);
+  })
+  .then('both stops resolve', async ({ world }) => {
+    await settlementsOf(world.stops);
+    ok(world.stops.every(hasSettled), 'a stop has not resolved');
   })
   .then('the recorded events are:\n$events', ({ world }, expected) => {
     deq(world.eventRecorder.trace(columnsOf(expected)), expected);
+  })
+  .then('the recorded invocations are:\n$invocations', ({ world }, expected) => {
+    deq(componentRecorderOf(world).sequence(columnsOf(expected)), expected);
   });
 
 function systemOf(world) {
@@ -104,21 +162,46 @@ function componentRecorderOf(world) {
   return world.componentRecorder;
 }
 
+function eachComponent(world, apply) {
+  const recorder = componentRecorderOf(world);
+  for (const component of world.components) apply(recorder, component);
+}
+
 function trackStart(world, promise) {
-  const start = { promise, settled: false };
-  promise.then(() => {
-    start.settled = true;
-  });
-  world.starts = (world.starts ?? []).concat(start);
+  return track(world, 'starts', promise);
+}
+
+function trackStop(world, promise) {
+  return track(world, 'stops', promise);
+}
+
+function track(world, key, promise) {
+  const operation = { promise, settled: false };
+  promise.then(settles(operation), settles(operation));
+  world[key] = (world[key] ?? []).concat(operation);
   return promise;
+}
+
+function settles(operation) {
+  return () => {
+    operation.settled = true;
+  };
 }
 
 function lastStart(world) {
   return world.starts.at(-1);
 }
 
-function startValues(world) {
-  return Promise.all(world.starts.map((start) => start.promise));
+function lastStop(world) {
+  return world.stops.at(-1);
+}
+
+function hasSettled(operation) {
+  return operation.settled;
+}
+
+function settlementsOf(operations) {
+  return Promise.all(operations.map((operation) => operation.promise));
 }
 
 function toStartValues(rows) {
