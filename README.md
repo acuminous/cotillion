@@ -166,6 +166,8 @@ Cotillion imposes nothing else. Components hold their own state, and you wire de
 
 Both operations are idempotent. Starting a system which is already started has no effect, resolving to the existing start values; stopping a system which is already stopped, or was never started, has no effect, resolving immediately. Calling an operation which is already in progress joins it rather than beginning it again.
 
+An operation with nothing to do is still an operation, and announces itself as one: it emits its [system events](#system-events) and skips every component, so a listener sees the operation whether or not there was anything for it to run. Only a call which joins an operation already in progress is silent, because it is not an operation of its own. This is what makes exiting from a `system_stop_succeeded` listener safe: however many times, and from wherever, `stop()` is called, each call announces a stop which succeeded.
+
 A stopped system can be started again, and `system.restart(options)` is the convenient composition: a stop followed by a start, resolving to the fresh start values. Its overall timeout bounds the whole round trip, so whatever the stop leaves unspent bounds the start. Restarting a system which is stopped, or was never started, simply starts it.
 
 ## Start values
@@ -194,17 +196,19 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | component_start_initiated | A component's start has been initiated                                                                                                                                  | name         |
 | component_start_succeeded | A component's start has resolved                                                                                                                                        | name         |
 | component_start_failed    | A component's start rejected                                                                                                                                            | name, error  |
-| component_start_skipped   | A component's start was never attempted, because an earlier component failed, the overall timeout expired, abort() was called, or the component has no start function   | name, reason |
+| component_start_skipped   | A component's start was never attempted, because it had already started, an earlier component failed, the overall timeout expired, abort() was called, or the component has no start function | name, reason |
 | component_start_aborted   | Cotillion cut away from the component's start without it settling, because the overall timeout expired or abort() was called                                            | name, reason |
 | component_stop_initiated  | A component's stop has been initiated                                                                                                                                   | name         |
 | component_stop_succeeded  | A component's stop has resolved                                                                                                                                         | name         |
 | component_stop_failed     | A component's stop rejected                                                                                                                                             | name, error  |
-| component_stop_skipped    | A component's stop was never attempted, because it never started, an earlier start failed or was aborted, another component's stop failed, the overall timeout expired, abort() was called, or the component has no stop function | name, reason |
+| component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the overall timeout expired, abort() was called, or the component has no stop function | name, reason |
 | component_stop_aborted    | Cotillion cut away from the component's stop without it settling, because the overall timeout expired or abort() was called                                             | name, reason |
 
-Every component event listener receives a single payload object. `name` is the component's name, `error` is the component's own error, and `reason` is one of `'timeout'`, `'abort'`, `'failure'`, `'missing'` or `'unstarted'`.
+Every component event listener receives a single payload object. `name` is the component's name, `error` is the component's own error, and `reason` is one of `'timeout'`, `'abort'`, `'failure'`, `'missing'`, `'started'` or `'unstarted'`.
 
 Both operations account for every component, not only the ones they ran: each component receives exactly one of the five events per operation. A stop announces `component_stop_skipped` for the components it will not stop, in stop order, before stopping the ones which are standing, so a shutdown trace names every component whether the system was fully started, partly started or never started at all. Stopping a component which never started is never attempted, because a stop function is written against what its start created.
+
+`'started'` and `'unstarted'` are states rather than histories: a component is skipped as `'unstarted'` whether it never started or has since stopped, and skipped as `'started'` when a start finds it already standing. A system which has already stopped therefore announces exactly what a system which never started announces, which is what the two being the same state should mean.
 
 ### System events
 

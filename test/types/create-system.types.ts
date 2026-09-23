@@ -14,6 +14,7 @@ const stopped: Promise<void> = system.stop();
 const restarted: Promise<StartValues> = system.restart();
 
 system.on(SystemEvent.StopSucceeded, () => {});
+system.on(SystemEvent.StartFailed, (error) => error?.message);
 system.on(ComponentEvent.StartFailed, ({ name, error }) => `${name} ${error?.message}`);
 
 system.on('system_stop_succeeded', () => {});
@@ -52,5 +53,5 @@ const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start
 // @ts-expect-error the system announces system_start_succeeded, not system_started
 system.on('system_started', () => {});
 
-// @ts-expect-error components are skipped for one of four reasons, and boredom is not one
+// @ts-expect-error components are skipped for one of the documented reasons, and boredom is not one
 const boredom: SkipReason = 'boredom';

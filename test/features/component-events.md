@@ -166,6 +166,56 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_stop_succeeded  | postgres  |         | name         |
   | system_stop_succeeded     |           |         |              |
 
+## Rule: A component already in the state the operation wants is skipped
+
+### Background:
+
+- Given the system's events are recorded
+
+### Scenario: Starting a system which has already started
+
+- Given the components postgres
+- And each component starts
+- When the system is started
+- And the system is started
+- Then postgres has started once
+- And the recorded events are:
+
+  | event                     | component | reason  | payload      |
+  |---------------------------|-----------|---------|--------------|
+  | system_start_initiated    |           |         |              |
+  | component_start_initiated | postgres  |         | name         |
+  | component_start_succeeded | postgres  |         | name         |
+  | system_start_succeeded    |           |         |              |
+  | system_start_initiated    |           |         |              |
+  | component_start_skipped   | postgres  | started | name, reason |
+  | system_start_succeeded    |           |         |              |
+
+### Scenario: Stopping a system which has already stopped
+
+- Given the components postgres
+- And each component starts
+- And each component stops
+- When the system is started
+- And the system is stopped
+- And the system is stopped
+- Then postgres has stopped once
+- And the recorded events are:
+
+  | event                     | component | reason    | payload      |
+  |---------------------------|-----------|-----------|--------------|
+  | system_start_initiated    |           |           |              |
+  | component_start_initiated | postgres  |           | name         |
+  | component_start_succeeded | postgres  |           | name         |
+  | system_start_succeeded    |           |           |              |
+  | system_stop_initiated     |           |           |              |
+  | component_stop_initiated  | postgres  |           | name         |
+  | component_stop_succeeded  | postgres  |           | name         |
+  | system_stop_succeeded     |           |           |              |
+  | system_stop_initiated     |           |           |              |
+  | component_stop_skipped    | postgres  | unstarted | name, reason |
+  | system_stop_succeeded     |           |           |              |
+
 ## Rule: A failure skips the components the operation never reaches
 
 ### Background:
@@ -179,7 +229,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - And emailListener fails to start
 - When the system starts
 - Then the start is rejected with emailListener's error
-- And the failed start event carries emailListener's error
+- And the failed component start event carries emailListener's error
 - And the recorded events are:
 
   | event                     | component     | reason  | payload      |
@@ -190,6 +240,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
+  | system_start_failed       |               |         | error        |
 
 ### Scenario: Stopping after a start which failed
 
@@ -210,6 +261,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
+  | system_start_failed       |               |         | error        |
   | system_stop_initiated     |               |         |              |
   | component_stop_skipped    | httpServer    | failure | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
@@ -235,6 +287,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | migrate       | failure | name, reason |
+  | system_start_failed       |               |         | error        |
 
 ### Scenario: A component fails to stop
 
@@ -245,7 +298,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - When the system is started
 - And the system stops
 - Then the stop is rejected with emailListener's error
-- And the failed stop event carries emailListener's error
+- And the failed component stop event carries emailListener's error
 - And the recorded events are:
 
   | event                     | component     | reason  | payload      |
@@ -260,6 +313,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_stop_initiated  | emailListener |         | name         |
   | component_stop_failed     | emailListener |         | name, error  |
   | component_stop_skipped    | postgres      | failure | name, reason |
+  | system_stop_failed        |               |         | error        |
 
 ## Rule: Events are notifications, never behaviour
 

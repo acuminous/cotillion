@@ -76,4 +76,29 @@ All notable changes to cotillion are documented here. The format follows
   `reason` where the table says so. The events are notifications: a system with no listeners
   starts, stops and rejects exactly as before. The `timeout` and `abort` reasons, and the
   `component_start_aborted` and `component_stop_aborted` events, are documented but not yet
-  emitted, and the failed system events still wait on #7.
+  emitted.
+
+- A system announces each operation as a whole (#7), so exit handling has something to listen
+  to: `system_start_failed` and `system_stop_failed` join the initiated and succeeded events
+  already emitted, completing the six the README documents. The failed events carry the
+  operation's error, which is the object the promise rejects with rather than a copy or a
+  wrapper, so a listener and a `catch` block see the same thing. The events belong to the
+  operation rather than to the call: a `start()` or `stop()` which joins one already in flight
+  announces nothing further, a stop retried after one which failed announces a second pair
+  because it is a second operation, and `restart()` emits the stop pair then the start pair
+  rather than events of its own. The failed events will also carry the `TimeoutError` and
+  `AbortError` of an operation which timed out or was aborted, which wait on #8 and #10.
+
+- An operation with nothing to do now announces itself like any other (#7), which makes the
+  README's exit idiom safe: `system.on('system_stop_succeeded', () => process.exit(0))` fires
+  for every `stop()`, not only for the one which happened to have components to stop. Stopping
+  a system which has already stopped emits its system events and announces every component as
+  `component_stop_skipped`, exactly as stopping a never started system already did, so the two
+  states the README calls the same state now look the same. Starting a system which has
+  already started does the same and still resolves to the existing start values object.
+  `started` joins the skip reasons for that case: a start skips a component which is already
+  standing, the mirror of `unstarted`, which now means a component which is not standing
+  rather than one which never ran. Only a call which joins an operation already in progress
+  stays silent, because it is not an operation of its own. If you were relying on a second
+  `stop()` being completely silent, a listener which logs or exits will now fire for it, which
+  is the point.

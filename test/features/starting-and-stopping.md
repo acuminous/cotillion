@@ -214,6 +214,9 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
   | component_stop_initiated  |
   | component_stop_succeeded  |
   | system_stop_succeeded     |
+  | system_stop_initiated     |
+  | component_stop_skipped    |
+  | system_stop_succeeded     |
 
 ### Scenario: Stopping a system which is already stopping
 

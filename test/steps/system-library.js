@@ -1,7 +1,7 @@
 const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/strict');
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
-const { ComponentEvent, createSystem } = require('../../lib');
+const { ComponentEvent, SystemEvent, createSystem } = require('../../lib');
 const { componentNamed } = require('../lib/component-notation');
 const { createComponentRecorder } = require('../lib/component-recorder');
 const { createEventRecorder } = require('../lib/event-recorder');
@@ -20,14 +20,19 @@ const argumentsOf = {
   stop: (recorder, name) => recorder.stopArguments(name),
 };
 
-const errorOf = {
+const componentErrorOf = {
   start: (recorder, name) => recorder.startError(name),
   stop: (recorder, name) => recorder.stopError(name),
 };
 
 const failedEventOf = {
-  start: ComponentEvent.StartFailed,
-  stop: ComponentEvent.StopFailed,
+  component: { start: ComponentEvent.StartFailed, stop: ComponentEvent.StopFailed },
+  system: { start: SystemEvent.StartFailed, stop: SystemEvent.StopFailed },
+};
+
+const announcedErrorOf = {
+  component: (recorder, event, name) => recorder.payloadOf(event, name).error,
+  system: (recorder, event) => recorder.errorOf(event),
 };
 
 const lastOperationOf = {
@@ -41,6 +46,7 @@ const dictionary = new Dictionary()
   .define('invocations', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('component', /(\w+)/)
   .define('lifecycle', /(start|stop)/)
+  .define('scope', /(component|system)/)
   .define('value', /(.+)/)
   .define('count', /(once|twice)/, async (word) => counts[word]);
 
@@ -153,11 +159,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .then("the $lifecycle is rejected with $component's error", async ({ world }, lifecycle, name) => {
     const error = await rejectionOf(lastOperationOf[lifecycle](world));
-    eq(error, errorOf[lifecycle](componentRecorderOf(world), name));
+    eq(error, componentErrorOf[lifecycle](componentRecorderOf(world), name));
   })
-  .then("the failed $lifecycle event carries $component's error", ({ world }, lifecycle, name) => {
-    const { error } = world.eventRecorder.payloadOf(failedEventOf[lifecycle], name);
-    eq(error, errorOf[lifecycle](componentRecorderOf(world), name));
+  .then("the failed $scope $lifecycle event carries $component's error", ({ world }, scope, lifecycle, name) => {
+    const announced = announcedErrorOf[scope](world.eventRecorder, failedEventOf[scope][lifecycle], name);
+    eq(announced, componentErrorOf[lifecycle](componentRecorderOf(world), name));
   })
   .then('both starts resolve to the same start values', async ({ world }) => {
     const [first, second] = await settlementsOf(world.starts);

@@ -24,7 +24,7 @@ export type ComponentEventName = `${ComponentEvent}`;
 
 export type SystemEventName = `${SystemEvent}`;
 
-export type SkipReason = 'timeout' | 'abort' | 'failure' | 'missing' | 'unstarted';
+export type SkipReason = 'timeout' | 'abort' | 'failure' | 'missing' | 'started' | 'unstarted';
 
 export interface ComponentEventPayload {
   name: string;
