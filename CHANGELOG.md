@@ -103,6 +103,22 @@ All notable changes to cotillion are documented here. The format follows
   `stop()` being completely silent, a listener which logs or exits will now fire for it, which
   is the point.
 
+- Each operation can be given an overall timeout (#8): `start`, `stop` and `restart` accept
+  `{ timeout }` in milliseconds, and omitting it means cotillion waits for as long as the
+  components take. The timeout bounds the whole operation rather than each component. When it
+  expires the in-flight component's AbortSignal fires, carrying the same error the operation
+  rejects with, the components not yet reached are skipped with the reason `timeout`, and the
+  operation rejects with a `TimeoutError`, cotillion's own exported class, whose message names
+  the operation, the timeout and the component it was waiting for. A restart's timeout spans
+  the stop and the start, so whatever the stop leaves unspent bounds the start. For now the
+  timed-out component is cut away the moment the timeout expires and announced as
+  `component_start_aborted` or `component_stop_aborted` with the reason `timeout`; waiting for
+  it to wind down, and the abort timeout which bounds that wait, arrive with `abort()` (#10). A
+  component cut away while starting is treated as started, so the next `stop()` attempts to
+  stop it, and one cut away while stopping is still standing, so the next `stop()` tries it
+  again. A `start()` or `stop()` which joins an operation already in flight joins it under the
+  timeout that operation was given, and its own is ignored.
+
 - The library's vocabulary now distinguishes a component from its definition (#15). A component
   is what a start function returns, the connected client or the listening server, and the
   `{ name, start, stop, timeout }` object which produces one is a component definition; the

@@ -1,7 +1,7 @@
 const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/strict');
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
-const { ComponentEvent, SystemEvent, createSystem } = require('../../lib');
+const { ComponentEvent, SystemEvent, TimeoutError, createSystem } = require('../../lib');
 const { definitionNamed } = require('../lib/definition-notation');
 const { createComponentRecorder } = require('../lib/component-recorder');
 const { createEventRecorder } = require('../lib/event-recorder');
@@ -15,9 +15,21 @@ const {
 
 const counts = { once: 1, twice: 2 };
 
+const activities = { starting: 'start', stopping: 'stop' };
+
+const hangsWhile = {
+  start: (recorder, entry) => recorder.hangsWhileStarting(entry),
+  stop: (recorder, entry) => recorder.hangsWhileStopping(entry),
+};
+
 const argumentsOf = {
   start: (recorder, name) => recorder.startArguments(name),
   stop: (recorder, name) => recorder.stopArguments(name),
+};
+
+const signalOf = {
+  start: (recorder, name) => recorder.startSignal(name),
+  stop: (recorder, name) => recorder.stopSignal(name),
 };
 
 const componentErrorOf = {
@@ -38,6 +50,7 @@ const announcedErrorOf = {
 const lastOperationOf = {
   start: lastStart,
   stop: lastStop,
+  restart: lastStart,
 };
 
 const dictionary = new Dictionary()
@@ -46,9 +59,13 @@ const dictionary = new Dictionary()
   .define('invocations', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('component', /(\w+)/)
   .define('lifecycle', /(start|stop)/)
+  .define('operation', /(start|stop|restart)/)
+  .define('activity', /(starting|stopping)/, async (word) => activities[word])
   .define('scope', /(component|system)/)
   .define('value', /(.+)/)
-  .define('count', /(once|twice)/, async (word) => counts[word]);
+  .define('count', /(once|twice)/, async (word) => counts[word])
+  .define('timeout', /(\d+)ms/, async (digits) => Number(digits))
+  .define('message', /"([^"]+)"/);
 
 module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given("the system's events are recorded", ({ world }) => {
@@ -83,11 +100,20 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('each component stops on demand', ({ world }) => {
     eachComponent(world, (recorder, component) => recorder.stopsOnDemand(component));
   })
+  .given('$component starts on demand', ({ world }, name) => {
+    componentRecorderOf(world).startsOnDemand(definitionNamed(world.definition, name));
+  })
+  .given('$component stops on demand', ({ world }, name) => {
+    componentRecorderOf(world).stopsOnDemand(definitionNamed(world.definition, name));
+  })
   .given('$component fails to start', ({ world }, name) => {
     componentRecorderOf(world).failsToStart(definitionNamed(world.definition, name));
   })
   .given('$component fails to stop', ({ world }, name) => {
     componentRecorderOf(world).failsToStop(definitionNamed(world.definition, name));
+  })
+  .given('$component hangs while $activity', ({ world }, name, lifecycle) => {
+    hangsWhile[lifecycle](componentRecorderOf(world), definitionNamed(world.definition, name));
   })
   .when('the system starts', ({ world }) => {
     trackStart(world, systemOf(world).start());
@@ -103,6 +129,15 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .when('the system is restarted', async ({ world }) => {
     await trackStart(world, systemOf(world).restart());
+  })
+  .when('the system starts with a timeout of $timeout', ({ world }, timeout) => {
+    trackStart(world, systemOf(world).start({ timeout }));
+  })
+  .when('the system stops with a timeout of $timeout', ({ world }, timeout) => {
+    trackStop(world, systemOf(world).stop({ timeout }));
+  })
+  .when('the system restarts with a timeout of $timeout', ({ world }, timeout) => {
+    trackStart(world, systemOf(world).restart({ timeout }));
   })
   .when('$component has started', async ({ world }, name) => {
     componentRecorderOf(world).releaseStart(name);
@@ -140,12 +175,19 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then('$component has stopped $count', ({ world }, name, count) => {
     eq(componentRecorderOf(world).stopCount(name), count);
   })
+  .then("$component's $lifecycle was given an abort signal which has not fired", ({ world }, name, lifecycle) => {
+    const [signal] = argumentsOf[lifecycle](componentRecorderOf(world), name);
+    ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
+    eq(signalOf[lifecycle](componentRecorderOf(world), name).fired, false, `${name}'s ${lifecycle} signal fired`);
+  })
   .then(
-    "$component's $lifecycle was given an abort signal which has not been aborted",
+    "$component's $lifecycle was given an abort signal which has fired with that error",
     ({ world }, name, lifecycle) => {
       const [signal] = argumentsOf[lifecycle](componentRecorderOf(world), name);
       ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
-      eq(signal.aborted, false);
+      const { fired, reason } = signalOf[lifecycle](componentRecorderOf(world), name);
+      ok(fired, `${name}'s ${lifecycle} signal did not fire`);
+      eq(reason, world.rejection);
     },
   )
   .then("$component's $lifecycle was given no other arguments", ({ world }, name, lifecycle) => {
@@ -154,8 +196,14 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then('the system has started', ({ world }) => {
     ok(lastStart(world).settled, 'the start has not resolved');
   })
+  .then('the system has not started', ({ world }) => {
+    ok(!lastStart(world).settled, 'the start has resolved');
+  })
   .then('the system has stopped', ({ world }) => {
     ok(lastStop(world).settled, 'the stop has not resolved');
+  })
+  .then('the system has not stopped', ({ world }) => {
+    ok(!lastStop(world).settled, 'the stop has resolved');
   })
   .then("the $lifecycle is rejected with $component's error", async ({ world }, lifecycle, name) => {
     const error = await rejectionOf(lastOperationOf[lifecycle](world));
@@ -164,6 +212,15 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then("the failed $scope $lifecycle event carries $component's error", ({ world }, scope, lifecycle, name) => {
     const announced = announcedErrorOf[scope](world.eventRecorder, failedEventOf[scope][lifecycle], name);
     eq(announced, componentErrorOf[lifecycle](componentRecorderOf(world), name));
+  })
+  .then('the $operation is rejected with a TimeoutError $message', async ({ world }, operation, message) => {
+    const error = await rejectionOf(lastOperationOf[operation](world));
+    ok(error instanceof TimeoutError, `the ${operation} was rejected with ${error.constructor.name}: ${error.message}`);
+    eq(error.message, message);
+    world.rejection = error;
+  })
+  .then('the failed system $lifecycle event carries that error', ({ world }, lifecycle) => {
+    eq(world.eventRecorder.errorOf(failedEventOf.system[lifecycle]), world.rejection);
   })
   .then('both starts resolve to the same components', async ({ world }) => {
     const [first, second] = await settlementsOf(world.starts);

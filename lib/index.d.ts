@@ -49,12 +49,20 @@ export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)
 
 export type Components = { [name: string]: unknown };
 
+export interface OperationOptions {
+  timeout?: number;
+}
+
 export interface System {
   on(event: ComponentEventName, listener: (payload: ComponentEventPayload) => void): this;
   on(event: SystemEventName, listener: (error?: Error) => void): this;
-  start(): Promise<Components>;
-  stop(): Promise<void>;
-  restart(): Promise<Components>;
+  start(options?: OperationOptions): Promise<Components>;
+  stop(options?: OperationOptions): Promise<void>;
+  restart(options?: OperationOptions): Promise<Components>;
+}
+
+export class TimeoutError extends Error {
+  readonly name: 'TimeoutError';
 }
 
 export function createSystem(definition: SystemDefinition): System;

@@ -107,7 +107,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And each component stops
 - When the system is started
 - And the system is stopped
-- Then postgres's [lifecycle] was given an abort signal which has not been aborted
+- Then postgres's [lifecycle] was given an abort signal which has not fired
 - And postgres's [lifecycle] was given no other arguments
 
 ### Examples:

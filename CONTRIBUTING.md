@@ -15,6 +15,8 @@ a test, and the module layout stays as small as that specification allows.
 |----------------------------|--------------------------------------------------------------------|
 | lib/index.js               | createSystem, and the public exports                               |
 | lib/events.js              | the event names, as ComponentEvent and SystemEvent                 |
+| lib/errors.js              | the public error types                                             |
+| lib/deadline.js            | an operation's overall timeout: its timer, signal and TimeoutError |
 | lib/validate-definition.js | the eager validation createSystem applies to the system definition |
 | lib/index.d.ts             | the hand-written type definitions, importing nothing               |
 

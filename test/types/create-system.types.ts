@@ -4,6 +4,7 @@ import {
   type SkipReason,
   type System,
   SystemEvent,
+  TimeoutError,
   createSystem,
 } from '../../lib/index';
 
@@ -12,6 +13,13 @@ const system: System = createSystem([]);
 const components: Promise<Components> = system.start();
 const stopped: Promise<void> = system.stop();
 const restarted: Promise<Components> = system.restart();
+
+const boundedStart: Promise<Components> = system.start({ timeout: 30000 });
+const boundedStop: Promise<void> = system.stop({ timeout: 10000 });
+const boundedRestart: Promise<Components> = system.restart({ timeout: 30000 });
+
+const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
+const timedOutName: 'TimeoutError' = timedOut instanceof TimeoutError ? timedOut.name : 'TimeoutError';
 
 system.on(SystemEvent.StopSucceeded, () => {});
 system.on(SystemEvent.StartFailed, (error) => error?.message);
@@ -49,6 +57,9 @@ const timeoutWhichIsNotANumber: System = createSystem([{ name: 'postgres', timeo
 
 // @ts-expect-error start is a function, not a description
 const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start: 'soon' }]);
+
+// @ts-expect-error an operation's timeout is a number of milliseconds, not a description
+system.start({ timeout: 'soon' });
 
 // @ts-expect-error the system announces system_start_succeeded, not system_started
 system.on('system_started', () => {});

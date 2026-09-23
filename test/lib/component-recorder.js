@@ -23,6 +23,14 @@ function createComponentRecorder() {
     records(entry, 'stop', onDemand);
   }
 
+  function hangsWhileStarting(entry) {
+    records(entry, 'start', hangs);
+  }
+
+  function hangsWhileStopping(entry) {
+    records(entry, 'stop', hangs);
+  }
+
   function failsToStart(entry) {
     records(entry, 'start', rejects);
   }
@@ -33,10 +41,19 @@ function createComponentRecorder() {
 
   function records(entry, lifecycle, produce) {
     entry[lifecycle] = (...args) => {
-      const invocation = { component: entry.name, lifecycle, args, settled: false };
+      const invocation = { component: entry.name, lifecycle, args, settled: false, signal: { fired: false } };
       invocations.push(invocation);
+      observeSignal(invocation);
       return Promise.resolve(produce(invocation)).then(settles(invocation), fails(invocation));
     };
+  }
+
+  function observeSignal(invocation) {
+    const [signal] = invocation.args;
+    if (!(signal instanceof AbortSignal)) return;
+    signal.addEventListener('abort', () => {
+      invocation.signal = { fired: true, reason: signal.reason };
+    });
   }
 
   function rejects(invocation) {
@@ -46,6 +63,10 @@ function createComponentRecorder() {
   function onDemand(invocation) {
     invocation.deferral = createDeferral();
     return invocation.deferral.promise;
+  }
+
+  function hangs() {
+    return new Promise(() => {});
   }
 
   function settles(invocation) {
@@ -112,6 +133,14 @@ function createComponentRecorder() {
     return latest(name, 'stop').args;
   }
 
+  function startSignal(name) {
+    return latest(name, 'start').signal;
+  }
+
+  function stopSignal(name) {
+    return latest(name, 'stop').signal;
+  }
+
   function sequence(columns) {
     return toStepDataRows(invocations, columns);
   }
@@ -136,6 +165,8 @@ function createComponentRecorder() {
     stops,
     startsOnDemand,
     stopsOnDemand,
+    hangsWhileStarting,
+    hangsWhileStopping,
     failsToStart,
     failsToStop,
     releaseStart,
@@ -149,6 +180,8 @@ function createComponentRecorder() {
     stopError,
     startArguments,
     stopArguments,
+    startSignal,
+    stopSignal,
     sequence,
   };
 }
