@@ -78,6 +78,39 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
   parallel group, abort during stop, a second stop after an aborted one. Each documented
   behaviour was written as a failing test before the code existed. Keep it that way: when a
   check is load-bearing, break the code and watch the test fail.
+- **Follow [yadda's best practices](https://github.com/acuminous/yadda/blob/master/docs/best-practices.md)**,
+  which are binding here too: concrete component names over item1 and userA, dictionary terms
+  rather than anonymous captures, conversion at the dictionary boundary, example tables for
+  variations, rules to group scenarios, and natural grammar even when it costs the
+  implementation something. The feature is the specification; implementation complexity
+  belongs below it.
+
+## The test harness
+
+The harness is small but four of its properties were found by reading yadda's source rather
+than its README, and each one fails quietly when forgotten.
+
+- **Markdown features need their own file search.** yadda's FeatureFileSearch matches only
+  .feature, .spec and .specification, so test/features.test.js uses FileSearch with an
+  explicit /\.md$/ pattern and a MarkdownFeatureFileParser. A feature added under another
+  extension will simply not run.
+- **Scenario state lives on a nested world object.** yadda flattens a fresh context for each
+  step, so a value assigned to the context itself is lost before the next step. The runner
+  passes `{ world }` and steps destructure it.
+- **Steps are promise based, never callback based.** yadda treats a macro as callback style
+  when its arity is one more than the captured arguments, so `async ({ world }) => {}` is
+  awaited correctly but `async ({ world }, next) => {}` would be handed a callback it never
+  calls, and the step would hang.
+- **Every step library is registered in the runner.** createInstance takes the array of
+  libraries; a library nobody passes produces an undefined step error rather than silence.
+
+Two conventions sit on top of that. The event recorder in test/lib listens for every event
+name the library exports, so a scenario asserting a trace proves both what was announced and
+what was not; assert traces as markdown tables, whose columns the step compares selectively,
+so a scenario asks only for the columns it cares about. Component trees are written in
+test/features in the README's own array notation, `postgres, [[migrate, emailListener],
+smsListener], httpServer`, where bare words become components, brackets become groups, and
+numbers and quoted strings stay literal so a scenario can exercise a malformed entry.
 
 ## Time and cancellation discipline
 
