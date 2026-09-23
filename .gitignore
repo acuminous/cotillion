@@ -1,3 +1,5 @@
 node_modules
 lcov.info
 coverage
+.DS_Store
+.zed
