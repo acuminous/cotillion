@@ -24,6 +24,16 @@ All notable changes to cotillion are documented here. The format follows
   same rules are enforced at compile time: an unknown timeout key or a start which is not a
   function will not typecheck.
 
+- `system.start()` runs each component's start function in declaration order, one at a time, and
+  resolves to an object of start values keyed by component name (#3). A component with no start
+  function, or whose start returns nothing, appears with the value `undefined`, so every component
+  is in the object, and the values are returned to the caller rather than passed to other
+  components. Each start function is given an AbortSignal as its only argument, which nothing fires
+  yet. Starting a started system has no effect and resolves to the same object, a start requested
+  while one is in flight joins it rather than starting the components twice, and a stopped system
+  starts afresh. Components inside a parallel group are not started yet, and `stop()` still stops
+  nothing, so only a flat array of components is worth starting so far.
+
 - Every event name the README documents is exported as a constant, `ComponentEvent` and
   `SystemEvent`, mirroring the two tables in the Events section (#1). Listeners can be
   registered with either a constant or the string literal, and both are typed. Only the four
