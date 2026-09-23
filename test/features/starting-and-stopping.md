@@ -11,7 +11,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 
 - Given a system with no components
 - When the system is started
-- Then the start values are empty
+- Then there are no components
 - When the system is stopped
 - Then the recorded events are:
 
@@ -117,7 +117,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 | start     |
 | stop      |
 
-## Rule: The start values are keyed by component name
+## Rule: Starting resolves to the components, keyed by name
 
 ### Scenario: Components which return something from starting
 
@@ -125,40 +125,40 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And postgres starts with a connection
 - And httpServer starts with a listener
 - When the system is started
-- Then the start values are:
+- Then the components are:
 
-  | component  | value        |
+  | name       | component    |
   |------------|--------------|
   | postgres   | a connection |
   | httpServer | a listener   |
 
-### Scenario: A component with no start function
+### Scenario: A definition with no start function
 
 - Given the components postgres, migrate
 - And postgres starts with a connection
 - And migrate has no start function
 - When the system is started
 - Then migrate has not started
-- And the start values are:
+- And the components are:
 
-  | component | value        |
-  |-----------|--------------|
-  | postgres  | a connection |
-  | migrate   |              |
+  | name     | component    |
+  |----------|--------------|
+  | postgres | a connection |
+  | migrate  |              |
 
 ### Scenario: A component which starts without returning anything
 
 - Given the components postgres, migrate
 - And postgres starts with a connection
-- And migrate starts without returning a value
+- And migrate starts without returning anything
 - When the system is started
 - Then migrate has started once
-- And the start values are:
+- And the components are:
 
-  | component | value        |
-  |-----------|--------------|
-  | postgres  | a connection |
-  | migrate   |              |
+  | name     | component    |
+  |----------|--------------|
+  | postgres | a connection |
+  | migrate  |              |
 
 ## Rule: Starting is idempotent
 
@@ -169,7 +169,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - When the system is started
 - And the system is started
 - Then postgres has started once
-- And both starts resolve to the same start values
+- And both starts resolve to the same components
 
 ### Scenario: Starting a system which is already starting
 
@@ -179,7 +179,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And the system starts
 - When postgres has started
 - Then postgres has started once
-- And both starts resolve to the same start values
+- And both starts resolve to the same components
 
 ### Scenario: Starting a system which has been stopped
 
@@ -189,7 +189,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And the system is stopped
 - And the system is started
 - Then postgres has started twice
-- And the two starts resolve to different start values
+- And the two starts resolve to different components
 
 ## Rule: Stopping is idempotent
 
@@ -362,7 +362,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And each component stops
 - When the system is started
 - And the system is restarted
-- Then the two starts resolve to different start values
+- Then the two starts resolve to different components
 - And the recorded invocations are:
 
   | lifecycle | component  |

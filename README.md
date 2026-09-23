@@ -6,7 +6,7 @@ Graceful orchestration of network components.
 
 *The Cotillion Dance, engraved by James Caldwall after John Collet, 1771. [Yale Center for British Art, CC0](https://commons.wikimedia.org/wiki/File:James_Caldwall_-_The_Cotillion_Dance_-_B1977.14.11242_-_Yale_Center_for_British_Art.jpg).*
 
-A cotillion is a formal group dance of the 18th century, performed in figures called in strict order. This library calls the figures for your application's network components: database clients, queue listeners, HTTP servers. You supply an array of named components with asynchronous start and stop functions. Cotillion starts them in the order you declare, sequentially or in parallel groups, stops them in the reverse order, enforces an overall timeout on each operation, and can abort a component which refuses to finish.
+A cotillion is a formal group dance of the 18th century, performed in figures called in strict order. This library calls the figures for your application's network components: database clients, queue listeners, HTTP servers. You supply a definition: an array of named component definitions with asynchronous start and stop functions. Cotillion starts them in the order you declare, sequentially or in parallel groups, stops them in the reverse order, enforces an overall timeout on each operation, and can abort a component which refuses to finish.
 
 ## Contents
 
@@ -14,9 +14,9 @@ A cotillion is a formal group dance of the 18th century, performed in figures ca
 - [How it works](#how-it-works)
 - [Installation](#installation)
 - [Quick start](#quick-start)
-- [Components](#components)
+- [Defining components](#defining-components)
 - [Starting and stopping](#starting-and-stopping)
-- [Start values](#start-values)
+- [Components](#components)
 - [Events](#events)
 - [Timeouts](#timeouts)
 - [Aborting](#aborting)
@@ -39,9 +39,9 @@ If your wiring is simple enough to express as plain code, all you are missing is
 
 You define components, list them in start order, and create a system:
 
-1. Each component has a unique name and asynchronous start and stop functions.
+1. Each component definition has a unique name and asynchronous start and stop functions.
 2. The array defines the order. Nested arrays form groups which run in parallel.
-3. Starting the system runs the start functions in the declared order, sequentially or in parallel groups, racing the whole operation against an optional overall timeout, and resolves to an object holding each component's start value, keyed by name.
+3. Starting the system runs the start functions in the declared order, sequentially or in parallel groups, racing the whole operation against an optional overall timeout, and resolves to an object holding the components those functions produced, keyed by name.
 4. Stopping the system runs the stop functions in the reverse order, again racing an optional overall timeout.
 5. Aborting the system gives up on the in-flight component and short circuits the rest.
 6. The system is an event emitter, announcing the progress of each component and of each operation as a whole.
@@ -131,14 +131,14 @@ await client.query('select 1');
 console.log('listening', server.address());
 ```
 
-The entrypoint is a list of components in order, and each start value comes back from `system.start`, keyed by component name. The wiring between components stays plain code: the postgres module exports its client and the HTTP server imports it.
+The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. The wiring between components stays plain code: the postgres module exports its client and the HTTP server imports it.
 
-## Components
+## Defining components
 
-A component is a plain object:
+A component is whatever your start function produces: a connected database client, a subscribed queue listener, a listening HTTP server. You do not hand cotillion those. You hand it a definition of each one, which is a plain object:
 
 ```ts
-const component = {
+const emailListener = {
   name: 'email-listener',
   timeout: { start: 5000, stop: 30000 },
   async start(signal: AbortSignal) {
@@ -150,40 +150,40 @@ const component = {
 };
 ```
 
-- `name` is required and must be unique within the system. It keys the object of [start values](#start-values), identifies the component in [events](#events), and appears in error messages so you can see which component failed, timed out or was aborted. Uniqueness is validated when the system is created.
-- `start` and `stop` are optional; a missing function is skipped. Both receive an AbortSignal, described under [Timeouts](#timeouts). Whatever start returns is collected into the object of start values.
+- `name` is required and must be unique within the system. It keys the object of [components](#components), identifies the component in [events](#events), and appears in error messages so you can see which component failed, timed out or was aborted. Uniqueness is validated when the system is created.
+- `start` and `stop` are optional; a missing function is skipped. Both receive an AbortSignal, described under [Timeouts](#timeouts). Whatever start returns is the component, and is collected into the object `start()` resolves to.
 - `timeout` is optional: a number of milliseconds bounding both start and stop, or an object with `start`, `stop` and `abort` keys, each omissible. `start` and `stop` bound the invocations themselves; `abort` bounds how long cotillion waits for an aborted invocation to wind down. There are no defaults; see [Timeouts](#timeouts) and [Aborting](#aborting).
 
-Cotillion imposes nothing else. Components hold their own state, and you wire dependencies between them in plain code, as in the quick start above.
+Cotillion imposes nothing else. Components hold their own state, and you wire dependencies between them in plain code, as in the quick start above. The array of definitions, nested groups and all, is the system definition, and it is the only argument `createSystem` takes.
 
 ## Starting and stopping
 
-`createSystem(components)` validates the component array eagerly: missing names, duplicate names and malformed components are rejected at construction, not at start.
+`createSystem(definition)` validates the definition eagerly: missing names, duplicate names and malformed entries are rejected at construction, not at start.
 
-`system.start(options)` starts each component sequentially and, when the last one has started, resolves to the object of [start values](#start-values). If a component's start rejects, the system stops starting: the error propagates, and components which had already started remain started. Calling `system.stop()` afterwards stops exactly those components, in reverse order, so the recovery path after a failed start is the same call as a normal shutdown.
+`system.start(options)` starts each component sequentially and, when the last one has started, resolves to the object of [components](#components). If a component's start rejects, the system stops starting: the error propagates, and components which had already started remain started. Calling `system.stop()` afterwards stops exactly those components, in reverse order, so the recovery path after a failed start is the same call as a normal shutdown.
 
 `system.stop(options)` stops the started components sequentially in reverse order and resolves when the last one has stopped. If a component's stop rejects, the error propagates and earlier components are not stopped, consistent with start; `abort()` covers the stuck component case. A subsequent `stop()` retries from where the failed, timed-out or aborted one left off, stopping only the components which have not yet stopped.
 
-Both operations are idempotent. Starting a system which is already started has no effect, resolving to the existing start values; stopping a system which is already stopped, or was never started, has no effect, resolving immediately. Calling an operation which is already in progress joins it rather than beginning it again.
+Both operations are idempotent. Starting a system which is already started has no effect, resolving to the existing components; stopping a system which is already stopped, or was never started, has no effect, resolving immediately. Calling an operation which is already in progress joins it rather than beginning it again.
 
 An operation with nothing to do is still an operation, and announces itself as one: it emits its [system events](#system-events) and skips every component, so a listener sees the operation whether or not there was anything for it to run. Only a call which joins an operation already in progress is silent, because it is not an operation of its own. This is what makes exiting from a `system_stop_succeeded` listener safe: however many times, and from wherever, `stop()` is called, each call announces a stop which succeeded.
 
-A stopped system can be started again, and `system.restart(options)` is the convenient composition: a stop followed by a start, resolving to the fresh start values. Its overall timeout bounds the whole round trip, so whatever the stop leaves unspent bounds the start. Restarting a system which is stopped, or was never started, simply starts it.
+A stopped system can be started again, and `system.restart(options)` is the convenient composition: a stop followed by a start, resolving to the fresh components. Its overall timeout bounds the whole round trip, so whatever the stop leaves unspent bounds the start. Restarting a system which is stopped, or was never started, simply starts it.
 
-## Start values
+## Components
 
-Whatever a component's start function returns is collected into an object literal, keyed by component name, which `start()` resolves to:
+Whatever a start function returns is the component it produced, and they are collected into an object literal, keyed by name, which `start()` resolves to:
 
 ```ts
 const { postgres, httpServer } = await system.start({ timeout: 30000 });
 await postgres.query('select 1');
 ```
 
-Every component appears in the object; one with no start function, or whose start returned nothing, appears with the value `undefined`. The object is unordered by intent: sequencing is the array's job, and the object exists so the caller can reach the things starting created, such as a connected database client. It is also why component names must be unique, which is validated when the system is created. Any string is a valid name; one which is also a valid identifier destructures as above, and the rest are reachable by index access.
+Every name appears in the object; a definition with no start function, or whose start returned nothing, appears with the value `undefined`. The object is unordered by intent: sequencing is the definition's job, and the object exists so the caller can reach what starting created, such as a connected database client. It is also why names must be unique, which is validated when the system is created. Any string is a valid name; one which is also a valid identifier destructures as above, and the rest are reachable by index access.
 
-In TypeScript the object is typed: each property has whatever type its component's start function resolved to, inferred from the component array passed to `createSystem`, so the destructured `postgres` above is a `pg.Client` without a cast.
+In TypeScript the object is typed: each property has whatever type its start function resolved to, inferred from the definition passed to `createSystem`, so the destructured `postgres` above is a `pg.Client` without a cast.
 
-The start values only resolve once the whole system has started, so they cannot wire components to each other mid-start; wiring stays plain code, as in the [quick start](#quick-start). Cotillion never passes one component's start value to another: that would be dependency injection by the back door.
+The components only resolve once the whole system has started, so they cannot wire components to each other mid-start; wiring stays plain code, as in the [quick start](#quick-start). Cotillion never passes one component to another: that would be dependency injection by the back door.
 
 ## Events
 
@@ -346,7 +346,7 @@ If an entry of a group fails to start, the group is allowed to settle before the
 
 | Error          | Thrown when                                                                                                                      |
 |----------------|----------------------------------------------------------------------------------------------------------------------------------|
-| Error          | The component array is invalid: a missing or duplicate name, or a malformed component. Thrown by createSystem.                   |
+| Error          | The definition is invalid: a missing or duplicate name, or a malformed entry. Thrown by createSystem.                            |
 | TimeoutError   | The overall timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned. |
 | AbortError     | abort() was called while a start or stop was in progress. The message names the component, or components, in flight.             |
 | AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                          |

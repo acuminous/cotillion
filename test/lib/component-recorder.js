@@ -3,37 +3,37 @@ const { toStepDataRows } = require('./step-data-table');
 function createComponentRecorder() {
   const invocations = [];
 
-  function startsWith(component, value) {
-    records(component, 'start', () => value);
+  function startsWith(entry, value) {
+    records(entry, 'start', () => value);
   }
 
-  function starts(component) {
-    records(component, 'start', () => undefined);
+  function starts(entry) {
+    records(entry, 'start', () => undefined);
   }
 
-  function stops(component) {
-    records(component, 'stop', () => undefined);
+  function stops(entry) {
+    records(entry, 'stop', () => undefined);
   }
 
-  function startsOnDemand(component) {
-    records(component, 'start', onDemand);
+  function startsOnDemand(entry) {
+    records(entry, 'start', onDemand);
   }
 
-  function stopsOnDemand(component) {
-    records(component, 'stop', onDemand);
+  function stopsOnDemand(entry) {
+    records(entry, 'stop', onDemand);
   }
 
-  function failsToStart(component) {
-    records(component, 'start', rejects);
+  function failsToStart(entry) {
+    records(entry, 'start', rejects);
   }
 
-  function failsToStop(component) {
-    records(component, 'stop', rejects);
+  function failsToStop(entry) {
+    records(entry, 'stop', rejects);
   }
 
-  function records(component, lifecycle, produce) {
-    component[lifecycle] = (...args) => {
-      const invocation = { component: component.name, lifecycle, args, settled: false };
+  function records(entry, lifecycle, produce) {
+    entry[lifecycle] = (...args) => {
+      const invocation = { component: entry.name, lifecycle, args, settled: false };
       invocations.push(invocation);
       return Promise.resolve(produce(invocation)).then(settles(invocation), fails(invocation));
     };

@@ -38,23 +38,23 @@ export interface Timeouts {
   abort?: number;
 }
 
-export interface Component {
+export interface ComponentDefinition {
   name: string;
   start?: (signal: AbortSignal) => unknown;
   stop?: (signal: AbortSignal) => unknown;
   timeout?: number | Timeouts;
 }
 
-export type ComponentTree = readonly (Component | ComponentTree)[];
+export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
 
-export type StartValues = { [name: string]: unknown };
+export type Components = { [name: string]: unknown };
 
 export interface System {
   on(event: ComponentEventName, listener: (payload: ComponentEventPayload) => void): this;
   on(event: SystemEventName, listener: (error?: Error) => void): this;
-  start(): Promise<StartValues>;
+  start(): Promise<Components>;
   stop(): Promise<void>;
-  restart(): Promise<StartValues>;
+  restart(): Promise<Components>;
 }
 
-export function createSystem(components: ComponentTree): System;
+export function createSystem(definition: SystemDefinition): System;

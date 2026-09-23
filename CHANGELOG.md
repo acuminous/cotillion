@@ -9,25 +9,25 @@ All notable changes to cotillion are documented here. The format follows
 ### Added
 
 - `createSystem` exists, returning a system you can start and stop (#1). A system with no
-  components starts, resolving to an object of start values with no entries, and stops. The
+  definition starts, resolving to an object of components with no entries, and stops. The
   system is an EventEmitter and announces `system_start_initiated`, `system_start_succeeded`,
   `system_stop_initiated` and `system_stop_succeeded` around those operations, so a caller can
   already see an operation begin and end. The ordering, timeout and abort semantics the README
   specifies are not implemented yet, so there is nothing here worth depending on.
 
-- `createSystem` validates the component tree and throws rather than returning a system which
-  would fail later (#2). It checks that every entry is an object with a string name, that
-  names are unique throughout the tree including inside nested groups at any depth, that start
+- `createSystem` validates the system definition and throws rather than returning a system
+  which would fail later (#2). It checks that every entry is an object with a string name, that
+  names are unique throughout the definition including inside nested groups at any depth, that start
   and stop are functions where present, and that timeouts are positive numbers under the three
   known keys. The message names the offending component, or its position when it has no usable
   name, and the first violation in declaration order is the one reported. In TypeScript the
   same rules are enforced at compile time: an unknown timeout key or a start which is not a
   function will not typecheck.
 
-- `system.start()` runs each component's start function in declaration order, one at a time, and
-  resolves to an object of start values keyed by component name (#3). A component with no start
-  function, or whose start returns nothing, appears with the value `undefined`, so every component
-  is in the object, and the values are returned to the caller rather than passed to other
+- `system.start()` runs each start function in declaration order, one at a time, and resolves to
+  an object of the components they produced, keyed by name (#3). A definition with no start
+  function, or whose start returns nothing, appears with the value `undefined`, so every name
+  is in the object, and the components are returned to the caller rather than passed to other
   components. Each start function is given an AbortSignal as its only argument, which nothing fires
   yet. Starting a started system has no effect and resolves to the same object, a start requested
   while one is in flight joins it rather than starting the components twice, and a stopped system
@@ -95,10 +95,20 @@ All notable changes to cotillion are documented here. The format follows
   a system which has already stopped emits its system events and announces every component as
   `component_stop_skipped`, exactly as stopping a never started system already did, so the two
   states the README calls the same state now look the same. Starting a system which has
-  already started does the same and still resolves to the existing start values object.
+  already started does the same and still resolves to the existing components object.
   `started` joins the skip reasons for that case: a start skips a component which is already
   standing, the mirror of `unstarted`, which now means a component which is not standing
   rather than one which never ran. Only a call which joins an operation already in progress
   stays silent, because it is not an operation of its own. If you were relying on a second
   `stop()` being completely silent, a listener which logs or exits will now fire for it, which
   is the point.
+
+- The library's vocabulary now distinguishes a component from its definition (#15). A component
+  is what a start function returns, the connected client or the listening server, and the
+  `{ name, start, stop, timeout }` object which produces one is a component definition; the
+  array of those is the system definition. So `createSystem(definition)` takes a
+  `SystemDefinition` of `ComponentDefinition` entries, `start()` and `restart()` resolve to
+  `Components` rather than `StartValues`, and the validation messages name `definition[1]`
+  rather than `components[1]`. The ten component event names are unchanged, because they
+  announce a component by name and the name belongs to both. Nothing has been published, so
+  this breaks nobody.

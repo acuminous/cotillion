@@ -1,7 +1,7 @@
 const { equal: eq, ok } = require('node:assert/strict');
 const Yadda = require('yadda');
 const { createSystem } = require('../../lib');
-const { componentNamed, parseComponents, parseValue } = require('../lib/component-notation');
+const { definitionNamed, parseDefinition, parseValue } = require('../lib/definition-notation');
 
 const {
   Dictionary,
@@ -10,7 +10,7 @@ const {
 } = Yadda;
 
 const dictionary = new Dictionary()
-  .define('components', /(.+)/, async (notation) => parseComponents(notation))
+  .define('components', /(.+)/, async (notation) => parseDefinition(notation))
   .define('component', /(\w+)/)
   .define('lifecycle', /(start|stop)/)
   .define('key', /(\w+)/)
@@ -18,30 +18,30 @@ const dictionary = new Dictionary()
   .define('message', /"([^"]+)"/);
 
 module.exports = English.localise(new ContextParamLibrary(dictionary))
-  .given('the components $components', ({ world }, components) => {
-    world.components = components;
+  .given('the components $components', ({ world }, definition) => {
+    world.definition = definition;
   })
   .given('$component has no name', ({ world }, name) => {
     // biome-ignore lint/performance/noDelete: the scenario needs the key absent, not present and undefined
-    delete componentNamed(world.components, name).name;
+    delete definitionNamed(world.definition, name).name;
   })
   .given('$component is named $value', ({ world }, name, value) => {
-    componentNamed(world.components, name).name = value;
+    definitionNamed(world.definition, name).name = value;
   })
   .given('$component has a start and a stop', ({ world }, name) => {
-    Object.assign(componentNamed(world.components, name), { async start() {}, async stop() {} });
+    Object.assign(definitionNamed(world.definition, name), { async start() {}, async stop() {} });
   })
   .given('$component has a $lifecycle of $value', ({ world }, name, lifecycle, value) => {
-    componentNamed(world.components, name)[lifecycle] = value;
+    definitionNamed(world.definition, name)[lifecycle] = value;
   })
   .given('$component has a timeout of $value', ({ world }, name, value) => {
-    componentNamed(world.components, name).timeout = value;
+    definitionNamed(world.definition, name).timeout = value;
   })
   .given('$component has an? $key timeout of $value', ({ world }, name, key, value) => {
-    componentNamed(world.components, name).timeout = { [key]: value };
+    definitionNamed(world.definition, name).timeout = { [key]: value };
   })
   .when('the system is created', ({ world }) => {
-    world.error = errorFrom(() => createSystem(world.components));
+    world.error = errorFrom(() => createSystem(world.definition));
   })
   .then('the system is accepted', ({ world }) => {
     eq(world.error, undefined);

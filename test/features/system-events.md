@@ -177,7 +177,7 @@ error, which is the same object the promise rejects with.
 - And each component starts
 - When the system is started
 - And the system is started
-- Then both starts resolve to the same start values
+- Then both starts resolve to the same components
 - And the recorded events are:
 
   | event                     | component  | reason  | payload      |

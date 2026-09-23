@@ -1,10 +1,10 @@
 # Feature: Creating a system
 
-A malformed component tree is a programming error, so cotillion rejects it when the system is
-created rather than when it is started. The array is walked in the order it was declared, and
-the first violation is the one reported.
+A malformed system definition is a programming error, so cotillion rejects it when the system
+is created rather than when it is started. The array is walked in the order it was declared,
+and the first violation is the one reported.
 
-## Rule: A well formed tree is accepted
+## Rule: A well formed definition is accepted
 
 ### Scenario: A sequence of components
 
@@ -28,35 +28,35 @@ the first violation is the one reported.
 - When the system is created
 - Then the system is accepted
 
-## Rule: Every entry is a component
+## Rule: Every entry defines a component
 
 ### Scenario: An entry which is not an object
 
 - Given the components postgres, 42
 - When the system is created
-- Then the system is rejected with "The entry at components[1] is not an object"
+- Then the system is rejected with "The entry at definition[1] is not an object"
 
 ### Scenario: An entry inside a group which is not an object
 
 - Given the components postgres, [emailListener, "smsListener"]
 - When the system is created
-- Then the system is rejected with "The entry at components[1][1] is not an object"
+- Then the system is rejected with "The entry at definition[1][1] is not an object"
 
 ### Scenario: A component with no name
 
 - Given the components postgres, httpServer
 - And httpServer has no name
 - When the system is created
-- Then the system is rejected with "The entry at components[1] has no name"
+- Then the system is rejected with "The entry at definition[1] has no name"
 
 ### Scenario: A name which is not a string
 
 - Given the components postgres
 - And postgres is named 42
 - When the system is created
-- Then the system is rejected with "The entry at components[0] has a name which is not a string"
+- Then the system is rejected with "The entry at definition[0] has a name which is not a string"
 
-## Rule: Names are unique throughout the tree
+## Rule: Names are unique throughout the definition
 
 ### Scenario: Two components in the same sequence share a name
 

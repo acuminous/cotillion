@@ -2,7 +2,7 @@ const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/st
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
 const { ComponentEvent, SystemEvent, createSystem } = require('../../lib');
-const { componentNamed } = require('../lib/component-notation');
+const { definitionNamed } = require('../lib/definition-notation');
 const { createComponentRecorder } = require('../lib/component-recorder');
 const { createEventRecorder } = require('../lib/event-recorder');
 const { parseStepDataTable } = require('../lib/step-data-table');
@@ -42,7 +42,7 @@ const lastOperationOf = {
 
 const dictionary = new Dictionary()
   .define('events', /([\s\S]+)/, async (text) => parseStepDataTable(text))
-  .define('values', /([\s\S]+)/, async (text) => parseStepDataTable(text))
+  .define('started', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('invocations', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('component', /(\w+)/)
   .define('lifecycle', /(start|stop)/)
@@ -55,21 +55,21 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     world.eventRecorder = createEventRecorder();
   })
   .given('a system with no components', ({ world }) => {
-    world.components = [];
+    world.definition = [];
   })
   .given('$component starts with $value', ({ world }, name, value) => {
-    componentRecorderOf(world).startsWith(componentNamed(world.components, name), value);
+    componentRecorderOf(world).startsWith(definitionNamed(world.definition, name), value);
   })
-  .given('$component starts without returning a value', ({ world }, name) => {
-    componentRecorderOf(world).startsWith(componentNamed(world.components, name), undefined);
+  .given('$component starts without returning anything', ({ world }, name) => {
+    componentRecorderOf(world).startsWith(definitionNamed(world.definition, name), undefined);
   })
   .given('$component has no start function', ({ world }, name) => {
     // biome-ignore lint/performance/noDelete: the scenario needs the key absent, not present and undefined
-    delete componentNamed(world.components, name).start;
+    delete definitionNamed(world.definition, name).start;
   })
   .given('$component has no stop function', ({ world }, name) => {
     // biome-ignore lint/performance/noDelete: the scenario needs the key absent, not present and undefined
-    delete componentNamed(world.components, name).stop;
+    delete definitionNamed(world.definition, name).stop;
   })
   .given('each component starts', ({ world }) => {
     eachComponent(world, (recorder, component) => recorder.starts(component));
@@ -84,10 +84,10 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     eachComponent(world, (recorder, component) => recorder.stopsOnDemand(component));
   })
   .given('$component fails to start', ({ world }, name) => {
-    componentRecorderOf(world).failsToStart(componentNamed(world.components, name));
+    componentRecorderOf(world).failsToStart(definitionNamed(world.definition, name));
   })
   .given('$component fails to stop', ({ world }, name) => {
-    componentRecorderOf(world).failsToStop(componentNamed(world.components, name));
+    componentRecorderOf(world).failsToStop(definitionNamed(world.definition, name));
   })
   .when('the system starts', ({ world }) => {
     trackStart(world, systemOf(world).start());
@@ -116,11 +116,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     componentRecorderOf(world).failStop(name);
     await setImmediate();
   })
-  .then('the start values are empty', async ({ world }) => {
+  .then('there are no components', async ({ world }) => {
     deq(await lastStart(world).promise, {});
   })
-  .then('the start values are:\n$values', async ({ world }, rows) => {
-    deq(await lastStart(world).promise, toStartValues(rows));
+  .then('the components are:\n$started', async ({ world }, rows) => {
+    deq(await lastStart(world).promise, toComponents(rows));
   })
   .then('$component is starting', ({ world }, name) => {
     ok(componentRecorderOf(world).isStarting(name), `${name} is not starting`);
@@ -165,11 +165,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     const announced = announcedErrorOf[scope](world.eventRecorder, failedEventOf[scope][lifecycle], name);
     eq(announced, componentErrorOf[lifecycle](componentRecorderOf(world), name));
   })
-  .then('both starts resolve to the same start values', async ({ world }) => {
+  .then('both starts resolve to the same components', async ({ world }) => {
     const [first, second] = await settlementsOf(world.starts);
     eq(first, second);
   })
-  .then('the two starts resolve to different start values', async ({ world }) => {
+  .then('the two starts resolve to different components', async ({ world }) => {
     const [first, second] = await settlementsOf(world.starts);
     neq(first, second);
   })
@@ -185,7 +185,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   });
 
 function systemOf(world) {
-  world.system ??= recordEvents(world, createSystem(world.components));
+  world.system ??= recordEvents(world, createSystem(world.definition));
   return world.system;
 }
 
@@ -200,7 +200,7 @@ function componentRecorderOf(world) {
 
 function eachComponent(world, apply) {
   const recorder = componentRecorderOf(world);
-  for (const component of world.components) apply(recorder, component);
+  for (const entry of world.definition) apply(recorder, entry);
 }
 
 function trackStart(world, promise) {
@@ -248,12 +248,12 @@ function settlementsOf(operations) {
   return Promise.all(operations.map((operation) => operation.promise));
 }
 
-function toStartValues(rows) {
-  return rows.reduce((values, row) => Object.assign(values, { [row.component]: cellValue(row) }), {});
+function toComponents(rows) {
+  return rows.reduce((components, row) => Object.assign(components, { [row.name]: cellComponent(row) }), {});
 }
 
-function cellValue(row) {
-  return row.value === '' ? undefined : row.value;
+function cellComponent(row) {
+  return row.component === '' ? undefined : row.component;
 }
 
 function columnsOf(rows) {

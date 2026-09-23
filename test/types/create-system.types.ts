@@ -1,7 +1,7 @@
 import {
   ComponentEvent,
+  type Components,
   type SkipReason,
-  type StartValues,
   type System,
   SystemEvent,
   createSystem,
@@ -9,9 +9,9 @@ import {
 
 const system: System = createSystem([]);
 
-const startValues: Promise<StartValues> = system.start();
+const components: Promise<Components> = system.start();
 const stopped: Promise<void> = system.stop();
-const restarted: Promise<StartValues> = system.restart();
+const restarted: Promise<Components> = system.restart();
 
 system.on(SystemEvent.StopSucceeded, () => {});
 system.on(SystemEvent.StartFailed, (error) => error?.message);
@@ -35,10 +35,10 @@ const httpServer = { name: 'httpServer' };
 
 const nested: System = createSystem([postgres, [[migrate, emailListener], httpServer]]);
 
-// @ts-expect-error a system is created from an array of components, not from nothing
+// @ts-expect-error a system is created from a definition, not from nothing
 const systemFromNothing: System = createSystem();
 
-// @ts-expect-error a component without a name is not a component
+// @ts-expect-error a definition without a name does not define a component
 const systemFromAnonymousComponents: System = createSystem([{}]);
 
 // @ts-expect-error finish is not one of the three timeout keys

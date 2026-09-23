@@ -1,4 +1,4 @@
-function parseComponents(notation) {
+function parseDefinition(notation) {
   const root = [];
   const stack = [root];
 
@@ -37,16 +37,16 @@ function isLiteral(token) {
   return token.startsWith('"') || /^-?\d+$/.test(token);
 }
 
-function componentNamed(entries, name) {
-  const component = findComponent(entries, name);
-  if (component) return component;
+function definitionNamed(entries, name) {
+  const definition = findDefinition(entries, name);
+  if (definition) return definition;
   throw new Error(`The scenario declares no component called ${name}`);
 }
 
-function findComponent(entries, name) {
+function findDefinition(entries, name) {
   for (const entry of entries) {
     if (Array.isArray(entry)) {
-      const found = findComponent(entry, name);
+      const found = findDefinition(entry, name);
       if (found) return found;
       continue;
     }
@@ -54,4 +54,4 @@ function findComponent(entries, name) {
   }
 }
 
-module.exports = { componentNamed, parseComponents, parseValue };
+module.exports = { definitionNamed, parseDefinition, parseValue };

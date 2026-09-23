@@ -2,8 +2,8 @@
 
 ## Architecture
 
-One entry point, deliberately little behind it. `createSystem(components)` validates the
-component tree eagerly (unique names throughout, well-formed components), then hands it to a
+One entry point, deliberately little behind it. `createSystem(definition)` validates the
+system definition eagerly (unique names throughout, well-formed entries), then hands it to a
 runner which walks it forwards on start and backwards on stop, racing each operation against
 a single AbortSignal derived from the overall timeout or an `abort()` call. The system is
 an EventEmitter; events are notifications only and must never carry behaviour the promise
@@ -11,12 +11,12 @@ contract does not. The public error types (TimeoutError, AbortError) live in
 their own module. The README is the specification: every behaviour it documents is asserted by
 a test, and the module layout stays as small as that specification allows.
 
-| Module                     | Holds                                                           |
-|----------------------------|-----------------------------------------------------------------|
-| lib/index.js               | createSystem, and the public exports                            |
-| lib/events.js              | the event names, as ComponentEvent and SystemEvent              |
-| lib/validate-components.js | the eager validation createSystem applies to the component tree |
-| lib/index.d.ts             | the hand-written type definitions, importing nothing            |
+| Module                     | Holds                                                              |
+|----------------------------|--------------------------------------------------------------------|
+| lib/index.js               | createSystem, and the public exports                               |
+| lib/events.js              | the event names, as ComponentEvent and SystemEvent                 |
+| lib/validate-definition.js | the eager validation createSystem applies to the system definition |
+| lib/index.d.ts             | the hand-written type definitions, importing nothing               |
 
 The table grows as the implementation lands; the conventions below are binding from the first
 commit.
@@ -28,8 +28,8 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
 - **Plain CommonJS in lib/**, no build step. TypeScript exists only in the hand-written
   lib/index.d.ts, test/types/ and documentation examples.
 - **The d.ts is a first-class deliverable.** No any, no as-casts. Its types are structural and
-  import nothing, so they survive every module resolution. The typed start-value object (each
-  property's type inferred from its component's start function) is part of the public
+  import nothing, so they survive every module resolution. The typed components object (each
+  property's type inferred from its definition's start function) is part of the public
   contract and is asserted in test/types/.
 - **Very small functions**, averaging a few lines. If a comment is coming on, extract a named
   function instead.
@@ -63,7 +63,7 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
   lives in feature specs (GitHub-flavoured markdown) under test/features/, with step
   libraries under test/steps/ and shared helpers under test/lib/, executed through node:test
   via yadda's node:test plugin, the whole suite via npm test. Scenarios are written in the
-  README's language (system, component, start, stop, abort, skip), and every behaviour the
+  README's language (system, definition, component, start, stop, abort, skip), and every behaviour the
   README documents traces to a scenario.
 - **No mocks.** Test components are real components: plain objects whose start and stop
   functions record their invocations and settle on demand through deferred promises. A
@@ -107,10 +107,11 @@ than its README, and each one fails quietly when forgotten.
 Two conventions sit on top of that. The event recorder in test/lib listens for every event
 name the library exports, so a scenario asserting a trace proves both what was announced and
 what was not; assert traces as markdown tables, whose columns the step compares selectively,
-so a scenario asks only for the columns it cares about. Component trees are written in
+so a scenario asks only for the columns it cares about. Definitions are written in
 test/features in the README's own array notation, `postgres, [[migrate, emailListener],
-smsListener], httpServer`, where bare words become components, brackets become groups, and
-numbers and quoted strings stay literal so a scenario can exercise a malformed entry.
+smsListener], httpServer`, where bare words become component definitions, brackets become
+groups, and numbers and quoted strings stay literal so a scenario can exercise a malformed
+entry.
 
 ## Time and cancellation discipline
 
