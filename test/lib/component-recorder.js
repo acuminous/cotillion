@@ -23,12 +23,24 @@ function createComponentRecorder() {
     records(component, 'stop', onDemand);
   }
 
+  function failsToStart(component) {
+    records(component, 'start', rejects);
+  }
+
+  function failsToStop(component) {
+    records(component, 'stop', rejects);
+  }
+
   function records(component, lifecycle, produce) {
     component[lifecycle] = (...args) => {
       const invocation = { component: component.name, lifecycle, args, settled: false };
       invocations.push(invocation);
       return Promise.resolve(produce(invocation)).then(settles(invocation), fails(invocation));
     };
+  }
+
+  function rejects(invocation) {
+    return Promise.reject(new Error(`${invocation.component} could not ${invocation.lifecycle}`));
   }
 
   function onDemand(invocation) {
@@ -46,6 +58,7 @@ function createComponentRecorder() {
   function fails(invocation) {
     return (error) => {
       invocation.settled = true;
+      invocation.error = error;
       throw error;
     };
   }
@@ -83,6 +96,14 @@ function createComponentRecorder() {
     return invocationsOf(name, 'stop').length;
   }
 
+  function startError(name) {
+    return latest(name, 'start').error;
+  }
+
+  function stopError(name) {
+    return latest(name, 'stop').error;
+  }
+
   function startArguments(name) {
     return latest(name, 'start').args;
   }
@@ -115,6 +136,8 @@ function createComponentRecorder() {
     stops,
     startsOnDemand,
     stopsOnDemand,
+    failsToStart,
+    failsToStop,
     releaseStart,
     releaseStop,
     failStop,
@@ -122,6 +145,8 @@ function createComponentRecorder() {
     isStopping,
     startCount,
     stopCount,
+    startError,
+    stopError,
     startArguments,
     stopArguments,
     sequence,

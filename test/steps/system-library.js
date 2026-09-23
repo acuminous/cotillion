@@ -1,4 +1,4 @@
-const { deepEqual: deq, equal: eq, notEqual: neq, ok, rejects } = require('node:assert/strict');
+const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/strict');
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
 const { createSystem } = require('../../lib');
@@ -18,6 +18,16 @@ const counts = { once: 1, twice: 2 };
 const argumentsOf = {
   start: (recorder, name) => recorder.startArguments(name),
   stop: (recorder, name) => recorder.stopArguments(name),
+};
+
+const errorOf = {
+  start: (recorder, name) => recorder.startError(name),
+  stop: (recorder, name) => recorder.stopError(name),
+};
+
+const lastOperationOf = {
+  start: lastStart,
+  stop: lastStop,
 };
 
 const dictionary = new Dictionary()
@@ -62,6 +72,12 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('each component stops on demand', ({ world }) => {
     eachComponent(world, (recorder, component) => recorder.stopsOnDemand(component));
   })
+  .given('$component fails to start', ({ world }, name) => {
+    componentRecorderOf(world).failsToStart(componentNamed(world.components, name));
+  })
+  .given('$component fails to stop', ({ world }, name) => {
+    componentRecorderOf(world).failsToStop(componentNamed(world.components, name));
+  })
   .when('the system starts', ({ world }) => {
     trackStart(world, systemOf(world).start());
   })
@@ -85,7 +101,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     componentRecorderOf(world).releaseStop(name);
     await setImmediate();
   })
-  .when('$component fails to stop', async ({ world }, name) => {
+  .when('$component has failed to stop', async ({ world }, name) => {
     componentRecorderOf(world).failStop(name);
     await setImmediate();
   })
@@ -130,8 +146,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then('the system has stopped', ({ world }) => {
     ok(lastStop(world).settled, 'the stop has not resolved');
   })
-  .then('the stop is rejected', async ({ world }) => {
-    await rejects(lastStop(world).promise);
+  .then("the $lifecycle is rejected with $component's error", async ({ world }, lifecycle, name) => {
+    const error = await rejectionOf(lastOperationOf[lifecycle](world));
+    eq(error, errorOf[lifecycle](componentRecorderOf(world), name));
   })
   .then('both starts resolve to the same start values', async ({ world }) => {
     const [first, second] = await settlementsOf(world.starts);
@@ -194,6 +211,14 @@ function lastStart(world) {
 
 function lastStop(world) {
   return world.stops.at(-1);
+}
+
+function rejectionOf(operation) {
+  return operation.promise.then(refuseResolution, (error) => error);
+}
+
+function refuseResolution() {
+  throw new Error('the operation resolved instead of rejecting');
 }
 
 function hasSettled(operation) {

@@ -45,6 +45,15 @@ All notable changes to cotillion are documented here. The format follows
   values, and restarting a stopped, or never started, system simply starts it. Neither operation
   takes options yet, so nothing bounds how long a stop will wait.
 
+- Both operations fail fast, and a component's own error reaches the caller unwrapped (#5). If a
+  component's start rejects, the later components are never attempted and the components which
+  had already started stay started, so `system.stop()` afterwards is the recovery path: it stops
+  exactly those, in reverse order, leaving the component which failed to start alone. If a
+  component's stop rejects, the components earlier in the stop order are left untouched and the
+  next `stop()` retries from where the failed one left off. Neither operation wraps, aggregates
+  or replaces the error it was given, so the object your component rejected with is the object
+  `start()` or `stop()` rejects with, and existing error handling keeps working.
+
 - Every event name the README documents is exported as a constant, `ComponentEvent` and
   `SystemEvent`, mirroring the two tables in the Events section (#1). Listeners can be
   registered with either a constant or the string literal, and both are typed. Only the four

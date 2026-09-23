@@ -238,6 +238,61 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
   | system_stop_initiated |
   | system_stop_succeeded |
 
+## Rule: A start which fails leaves the components which had started standing
+
+### Scenario: A component fails to start
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And each component stops
+- And emailListener fails to start
+- When the system starts
+- Then the start is rejected with emailListener's error
+- And the recorded invocations are:
+
+  | lifecycle | component     |
+  |-----------|---------------|
+  | start     | postgres      |
+  | start     | emailListener |
+
+### Scenario: Stopping after a start which failed
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And each component stops
+- And emailListener fails to start
+- When the system starts
+- Then the start is rejected with emailListener's error
+- When the system is stopped
+- Then the recorded invocations are:
+
+  | lifecycle | component     |
+  |-----------|---------------|
+  | start     | postgres      |
+  | start     | emailListener |
+  | stop      | postgres      |
+
+## Rule: A stop which fails leaves the earlier components untouched
+
+### Scenario: A component fails to stop
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And each component stops
+- And emailListener fails to stop
+- When the system is started
+- And the system stops
+- Then the stop is rejected with emailListener's error
+- And the recorded invocations are:
+
+  | lifecycle | component     |
+  |-----------|---------------|
+  | start     | postgres      |
+  | start     | emailListener |
+  | start     | httpServer    |
+  | stop      | httpServer    |
+  | stop      | emailListener |
+
 ## Rule: A stop which did not finish can be retried
 
 ### Scenario: Stopping again after a stop which failed
@@ -248,8 +303,8 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - When the system is started
 - And the system stops
 - And httpServer has stopped
-- And emailListener fails to stop
-- Then the stop is rejected
+- And emailListener has failed to stop
+- Then the stop is rejected with emailListener's error
 - When the system stops
 - And emailListener has stopped
 - And postgres has stopped
