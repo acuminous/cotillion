@@ -15,22 +15,35 @@ commit.
 
 ## Code conventions
 
+The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadda/blob/master/CONTRIBUTORS.md):
+
 - **Plain CommonJS in lib/**, no build step. TypeScript exists only in the hand-written
   lib/index.d.ts, test/types/ and documentation examples.
 - **The d.ts is a first-class deliverable.** No any, no as-casts. Its types are structural and
   import nothing, so they survive every module resolution. The typed start-value object (each
   property's type inferred from its component's start function) is part of the public
   contract and is asserted in test/types/.
-- **Avoid else and switch.** Guard clauses that return or throw early; forks become lookup
-  maps of named functions.
-- **Avoid boolean parameters**: two named functions, an enum, or a named option. Boolean
-  fields on data objects are fine.
-- **Very small functions.** If a comment is coming on, extract a named function instead. The
-  only acceptable comments explain why irreducibly confusing code cannot be simpler.
-- **Encapsulate.** Export exactly the public API in lib/index.d.ts; everything else stays
-  module-private, even when exporting would make a test easier.
+- **Very small functions**, averaging a few lines. If a comment is coming on, extract a named
+  function instead.
+- **Avoid else and switch.** They typically hide a fork in behaviour that is better handled
+  with polymorphism. Guard clauses that return or throw early are fine; other forks become
+  lookup maps of named functions.
+- **Avoid boolean parameters.** They lead to conditional branches: prefer two named
+  functions, an enum, or a named option. Boolean fields on data objects are fine.
+- **Favour composition and duck typing over inheritance.** No classical hierarchies. The one
+  sanctioned exception is the system extending Node's EventEmitter, which the README
+  specifies.
+- **Encapsulate: do not leak primitives.** When software leaks primitives, bad things
+  happen. Keep state private with closures rather than accessor and mutator patterns, and
+  export exactly the public API in lib/index.d.ts; everything else stays module-private,
+  even when exporting would make a test easier.
+- **Comments explain why, never what.** The only acceptable comments explain why irreducibly
+  confusing code cannot be simpler: workarounds, awkward algorithms. Simplify instead.
 - **Zero production dependencies.** Everything this library needs is small enough to own.
   Propose a dependency in an issue rather than adding one.
+- **Naming**: camelCase identifiers, matching the public API the README specifies
+  (createSystem, stopOn). yadda's internal snake_case is historical to yadda and does not
+  transfer; cotillion's snake_case event names are specification, not identifier style.
 - **British English** in identifiers, messages and docs. No em-dashes, and no backticks
   inside markdown tables.
 
@@ -73,6 +86,11 @@ overruled cheaply. When behaviour is deliberately surprising, the reasoning also
 comment at the point of use. If you find yourself writing "cannot" in a proposal, check whether you mean "chose not
 to": a genuine cannot deserves a probe or a named mechanism in the same breath, and a
 chose-not-to deserves the alternative sketched so the maintainer can overrule cheaply.
+
+## Contributions
+
+Consider opening an issue before implementing an improvement: the maintainer may have
+valuable input. Pull requests include automated tests, per the testing conventions above.
 
 ## Changelog
 
