@@ -14,3 +14,8 @@ All notable changes to cotillion are documented here. The format follows
   `system_stop_initiated` and `system_stop_succeeded` around those operations, so a caller can
   already see an operation begin and end. The ordering, timeout and abort semantics the README
   specifies are not implemented yet, so there is nothing here worth depending on.
+
+- Every event name the README documents is exported as a constant, `ComponentEvent` and
+  `SystemEvent`, mirroring the two tables in the Events section (#1). Listeners can be
+  registered with either a constant or the string literal, and both are typed. Only the four
+  system events above are emitted so far.

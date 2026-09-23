@@ -1,4 +1,6 @@
-const { documentedEventNames } = require('./event-names');
+const { ComponentEvent, SystemEvent } = require('../../lib');
+
+const documentedEventNames = Object.values(ComponentEvent).concat(Object.values(SystemEvent));
 
 function createEventRecorder() {
   const recorded = [];

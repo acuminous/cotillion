@@ -222,6 +222,17 @@ system.on('component_start_failed', ({ name, error }) => logger.error(`${name} f
 system.on('system_stop_succeeded', () => process.exit(0));
 ```
 
+The names are also exported as `ComponentEvent` and `SystemEvent`, mirroring the two tables above, so you can reach them through your editor rather than remembering them:
+
+```ts
+import { ComponentEvent, SystemEvent } from 'cotillion';
+
+system.on(ComponentEvent.StartFailed, ({ name, error }) => logger.error(`${name} failed to start`, error));
+system.on(SystemEvent.StopSucceeded, () => process.exit(0));
+```
+
+The two forms are interchangeable, and the rest of this README uses the string literals.
+
 Entries of a parallel group emit individually, so listeners observe the interleaving. The aborted events fire when cotillion cuts away from a component without its invocation settling; an aborted component which winds down within its `abort` timeout emits its failed or succeeded event as normal, even though the operation itself still rejects. No event is named `error`, deliberately: Node.js throws when an `error` event has no listener, and no cotillion listener is ever mandatory.
 
 ## Timeouts
