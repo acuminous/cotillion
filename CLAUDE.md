@@ -23,6 +23,32 @@ are what a session needs beyond them.
   coherent change, message explaining why rather than what. Track work in GitHub issues and
   close each with a comment recording what was decided and what evidence settled it.
 
+## Writing yadda scenarios
+
+CONTRIBUTING.md's test harness section lists four properties of the harness that fail quietly
+when forgotten; read it before adding a feature, along with
+[yadda's best practices](https://github.com/acuminous/yadda/blob/master/docs/best-practices.md).
+Beyond those:
+
+- **A feature is a markdown file under test/features/**, its steps in a library under
+  test/steps/ which must be passed to createInstance in test/features.test.js, and its helpers
+  in test/lib/. A library nobody registers gives an undefined step, not a warning.
+- **Group scenarios with Rule headings and vary them with Examples tables.** Both the scenario
+  title and the steps take `[column]` substitution, so each generated scenario names its own
+  case rather than repeating one title three times.
+- **Every Then asserts something the step library observed.** A Then which restates what the
+  preceding When just assigned asserts nothing. If an outcome is not observable, the scenario
+  is telling you the library needs to announce it, which is usually an event.
+- **Assert event sequences as markdown tables**, one row per event. The recorder listens for
+  every name the library exports, so the trace proves what was not announced as well as what
+  was, and the step compares only the columns the table declares.
+- **Keep the grammar natural even when the automation suffers**, per yadda's rule 4: an
+  article column beats generating "a abort timeout", and a step alias beats a contorted
+  sentence.
+- **Write the scenario first and watch it fail for the right reason**, then again after the
+  implementation by breaking it deliberately. A scenario that has never failed has not been
+  shown to assert anything.
+
 ## When to stop and ask the maintainer
 
 Stop and report, rather than silently deviating, when a documented behaviour is impossible or

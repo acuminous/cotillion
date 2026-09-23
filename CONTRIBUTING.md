@@ -11,12 +11,12 @@ contract does not. The public error types (TimeoutError, AbortError) live in
 their own module. The README is the specification: every behaviour it documents is asserted by
 a test, and the module layout stays as small as that specification allows.
 
-| Module                    | Holds                                                                 |
-|---------------------------|-----------------------------------------------------------------------|
-| lib/index.js              | createSystem, and the public exports                                  |
-| lib/events.js             | the event names, as ComponentEvent and SystemEvent                    |
-| lib/validate-components.js| the eager validation createSystem applies to the component tree       |
-| lib/index.d.ts            | the hand-written type definitions, importing nothing                  |
+| Module                     | Holds                                                           |
+|----------------------------|-----------------------------------------------------------------|
+| lib/index.js               | createSystem, and the public exports                            |
+| lib/events.js              | the event names, as ComponentEvent and SystemEvent              |
+| lib/validate-components.js | the eager validation createSystem applies to the component tree |
+| lib/index.d.ts             | the hand-written type definitions, importing nothing            |
 
 The table grows as the implementation lands; the conventions below are binding from the first
 commit.
