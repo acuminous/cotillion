@@ -1,7 +1,7 @@
 const { deepEqual: deq, equal: eq, notEqual: neq, ok } = require('node:assert/strict');
 const { setImmediate } = require('node:timers/promises');
 const Yadda = require('yadda');
-const { createSystem } = require('../../lib');
+const { ComponentEvent, createSystem } = require('../../lib');
 const { componentNamed } = require('../lib/component-notation');
 const { createComponentRecorder } = require('../lib/component-recorder');
 const { createEventRecorder } = require('../lib/event-recorder');
@@ -23,6 +23,11 @@ const argumentsOf = {
 const errorOf = {
   start: (recorder, name) => recorder.startError(name),
   stop: (recorder, name) => recorder.stopError(name),
+};
+
+const failedEventOf = {
+  start: ComponentEvent.StartFailed,
+  stop: ComponentEvent.StopFailed,
 };
 
 const lastOperationOf = {
@@ -150,6 +155,10 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     const error = await rejectionOf(lastOperationOf[lifecycle](world));
     eq(error, errorOf[lifecycle](componentRecorderOf(world), name));
   })
+  .then("the failed $lifecycle event carries $component's error", ({ world }, lifecycle, name) => {
+    const { error } = world.eventRecorder.payloadOf(failedEventOf[lifecycle], name);
+    eq(error, errorOf[lifecycle](componentRecorderOf(world), name));
+  })
   .then('both starts resolve to the same start values', async ({ world }) => {
     const [first, second] = await settlementsOf(world.starts);
     eq(first, second);
@@ -170,8 +179,12 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   });
 
 function systemOf(world) {
-  world.system ??= world.eventRecorder.record(createSystem(world.components));
+  world.system ??= recordEvents(world, createSystem(world.components));
   return world.system;
+}
+
+function recordEvents(world, system) {
+  return world.eventRecorder?.record(system) ?? system;
 }
 
 function componentRecorderOf(world) {

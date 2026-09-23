@@ -56,5 +56,24 @@ All notable changes to cotillion are documented here. The format follows
 
 - Every event name the README documents is exported as a constant, `ComponentEvent` and
   `SystemEvent`, mirroring the two tables in the Events section (#1). Listeners can be
-  registered with either a constant or the string literal, and both are typed. Only the four
-  system events above are emitted so far.
+  registered with either a constant or the string literal, and both are typed.
+
+- A system announces each component as it starts and stops (#6), so you can log progress, or
+  spot which component is holding a shutdown up, without instrumenting the components
+  themselves. `component_start_initiated` is emitted immediately before a component's start
+  function runs and `component_start_succeeded` once it resolves, `component_start_failed`
+  carries the component's own error when it rejects, and `component_start_skipped` announces a
+  component the start never attempted, with a `reason` of `missing` when it has no start
+  function or `failure` when an earlier component failed. Stopping announces the same four
+  events, reversed, and both operations account for every component rather than only the ones
+  they ran, so each component gets exactly one of the five events per operation. A stop
+  announces `component_stop_skipped` in stop order for every component it will not stop: with
+  the reason its start did not succeed where one ran, and `unstarted`, a new reason, where the
+  system never started at all. A shutdown trace therefore names every component whether the
+  system was fully started, partly started or never started, which is what an exit handler
+  wants to log. Cotillion still never calls a stop function for a component which did not
+  start, because a stop function is written against what its start created. Every listener receives one payload object, `{ name }` plus `error` or
+  `reason` where the table says so. The events are notifications: a system with no listeners
+  starts, stops and rejects exactly as before. The `timeout` and `abort` reasons, and the
+  `component_start_aborted` and `component_stop_aborted` events, are documented but not yet
+  emitted, and the failed system events still wait on #7.

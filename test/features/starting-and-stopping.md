@@ -204,12 +204,16 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - Then postgres has stopped once
 - And the recorded events are:
 
-  | event                  |
-  |------------------------|
-  | system_start_initiated |
-  | system_start_succeeded |
-  | system_stop_initiated  |
-  | system_stop_succeeded  |
+  | event                     |
+  |---------------------------|
+  | system_start_initiated    |
+  | component_start_initiated |
+  | component_start_succeeded |
+  | system_start_succeeded    |
+  | system_stop_initiated     |
+  | component_stop_initiated  |
+  | component_stop_succeeded  |
+  | system_stop_succeeded     |
 
 ### Scenario: Stopping a system which is already stopping
 
@@ -233,10 +237,11 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And postgres has not stopped
 - And the recorded events are:
 
-  | event                 |
-  |-----------------------|
-  | system_stop_initiated |
-  | system_stop_succeeded |
+  | event                  |
+  |------------------------|
+  | system_stop_initiated  |
+  | component_stop_skipped |
+  | system_stop_succeeded  |
 
 ## Rule: A start which fails leaves the components which had started standing
 
