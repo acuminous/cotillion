@@ -32,9 +32,20 @@ export interface ComponentEventPayload {
   reason?: SkipReason;
 }
 
+export interface Timeouts {
+  start?: number;
+  stop?: number;
+  abort?: number;
+}
+
 export interface Component {
   name: string;
+  start?: (signal: AbortSignal) => unknown;
+  stop?: (signal: AbortSignal) => unknown;
+  timeout?: number | Timeouts;
 }
+
+export type ComponentTree = readonly (Component | ComponentTree)[];
 
 export type StartValues = { [name: string]: unknown };
 
@@ -45,4 +56,4 @@ export interface System {
   stop(): Promise<void>;
 }
 
-export function createSystem(components: readonly Component[]): System;
+export function createSystem(components: ComponentTree): System;
