@@ -1,0 +1,57 @@
+{
+  "name": "cotillion",
+  "version": "0.0.0",
+  "description": "Graceful orchestration of network components",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 'test/**/*.test.js'",
+    "coverage": "node --test --test-concurrency=1 --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info 'test/**/*.test.js'",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "prepublishOnly": "npm run lint && npm run typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.2",
+    "lefthook": "^1.11.13",
+    "typescript": "^5.6.3",
+    "yadda": "^3.2.0"
+  },
+  "files": [
+    "lib"
+  ],
+  "keywords": [
+    "lifecycle",
+    "startup",
+    "shutdown",
+    "graceful-shutdown",
+    "orchestration",
+    "components",
+    "sigterm",
+    "timeout",
+    "abort",
+    "typescript"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acuminous/cotillion"
+  },
+  "homepage": "https://github.com/acuminous/cotillion#readme",
+  "bugs": {
+    "url": "https://github.com/acuminous/cotillion/issues"
+  },
+  "author": "Stephen Cresswell"
+}

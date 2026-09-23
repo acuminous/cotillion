@@ -37,8 +37,10 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
   happen. Keep state private with closures rather than accessor and mutator patterns, and
   export exactly the public API in lib/index.d.ts; everything else stays module-private,
   even when exporting would make a test easier.
-- **Comments explain why, never what.** The only acceptable comments explain why irreducibly
-  confusing code cannot be simpler: workarounds, awkward algorithms. Simplify instead.
+- **No comments.** Not what, and not why either. Code that needs explaining needs better names
+  or smaller functions, and a reason worth recording belongs in the commit message or the
+  issue, where it stays true. The only exceptions are the directives a tool reads, such as
+  biome-ignore and ts-expect-error.
 - **Zero production dependencies.** Everything this library needs is small enough to own.
   Propose a dependency in an issue rather than adding one.
 - **Naming**: camelCase identifiers, matching the public API the README specifies
@@ -82,10 +84,11 @@ needs to know about cancellation, thread the signal in as a parameter.
 
 Decisions of record live in the closed GitHub issues, each closed with a comment stating what
 was decided, why, and what evidence settled it, with the alternative sketched so it can be
-overruled cheaply. When behaviour is deliberately surprising, the reasoning also lives as a
-comment at the point of use. If you find yourself writing "cannot" in a proposal, check whether you mean "chose not
-to": a genuine cannot deserves a probe or a named mechanism in the same breath, and a
-chose-not-to deserves the alternative sketched so the maintainer can overrule cheaply.
+overruled cheaply. When behaviour is deliberately surprising, the issue and the commit message
+carry the reasoning; the code itself stays uncommented. If you find yourself writing "cannot"
+in a proposal, check whether you mean "chose not to": a genuine cannot deserves a probe or a
+named mechanism in the same breath, and a chose-not-to deserves the alternative sketched so
+the maintainer can overrule cheaply.
 
 ## Contributions
 
