@@ -68,7 +68,7 @@ All notable changes to cotillion are documented here. The format follows
   events, reversed, and both operations account for every component rather than only the ones
   they ran, so each component gets exactly one of the five events per operation. A stop
   announces `component_stop_skipped` in stop order for every component it will not stop: with
-  the reason its start did not succeed where one ran, and `unstarted`, a new reason, where the
+  the reason its start did not succeed where one ran, and `stopped`, a new reason, where the
   system never started at all. A shutdown trace therefore names every component whether the
   system was fully started, partly started or never started, which is what an exit handler
   wants to log. Cotillion still never calls a stop function for a component which did not
@@ -97,7 +97,7 @@ All notable changes to cotillion are documented here. The format follows
   states the README calls the same state now look the same. Starting a system which has
   already started does the same and still resolves to the existing components object.
   `started` joins the skip reasons for that case: a start skips a component which is already
-  standing, the mirror of `unstarted`, which now means a component which is not standing
+  standing, the mirror of `stopped`, which now means a component which is not standing
   rather than one which never ran. Only a call which joins an operation already in progress
   stays silent, because it is not an operation of its own. If you were relying on a second
   `stop()` being completely silent, a listener which logs or exits will now fire for it, which

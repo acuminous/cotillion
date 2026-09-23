@@ -48,8 +48,8 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | event                  | component  | reason    | payload      |
   |------------------------|------------|-----------|--------------|
   | system_stop_initiated  |            |           |              |
-  | component_stop_skipped | httpServer | unstarted | name, reason |
-  | component_stop_skipped | postgres   | unstarted | name, reason |
+  | component_stop_skipped | httpServer | stopped   | name, reason |
+  | component_stop_skipped | postgres   | stopped   | name, reason |
   | system_stop_succeeded  |            |           |              |
 
 ## Rule: A component is announced before its function runs and after it settles
@@ -213,7 +213,7 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_stop_succeeded  | postgres  |           | name         |
   | system_stop_succeeded     |           |           |              |
   | system_stop_initiated     |           |           |              |
-  | component_stop_skipped    | postgres  | unstarted | name, reason |
+  | component_stop_skipped    | postgres  | stopped   | name, reason |
   | system_stop_succeeded     |           |           |              |
 
 ## Rule: A failure skips the components the operation never reaches

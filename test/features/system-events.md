@@ -168,7 +168,7 @@ error, which is the same object the promise rejects with.
   | event                  | component | reason    | payload      |
   |------------------------|-----------|-----------|--------------|
   | system_stop_initiated  |           |           |              |
-  | component_stop_skipped | postgres  | unstarted | name, reason |
+  | component_stop_skipped | postgres  | stopped   | name, reason |
   | system_stop_succeeded  |           |           |              |
 
 ### Scenario: Starting a system which has already started
@@ -230,7 +230,7 @@ error, which is the same object the promise rejects with.
   | event                     | component | reason    |
   |---------------------------|-----------|-----------|
   | system_stop_initiated     |           |           |
-  | component_stop_skipped    | postgres  | unstarted |
+  | component_stop_skipped    | postgres  | stopped   |
   | system_stop_succeeded     |           |           |
   | system_start_initiated    |           |           |
   | component_start_initiated | postgres  |           |

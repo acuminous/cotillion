@@ -209,11 +209,11 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the overall timeout expired, abort() was called, or the component has no stop function | name, reason |
 | component_stop_aborted    | Cotillion cut away from the component's stop without it settling, because the overall timeout expired or abort() was called                                             | name, reason |
 
-Every component event listener receives a single payload object. `name` is the component's name, `error` is the component's own error, and `reason` is one of `'timeout'`, `'abort'`, `'failure'`, `'missing'`, `'started'` or `'unstarted'`.
+Every component event listener receives a single payload object. `name` is the component's name, `error` is the component's own error, and `reason` is one of `'timeout'`, `'abort'`, `'failure'`, `'missing'`, `'started'` or `'stopped'`.
 
 Both operations account for every component, not only the ones they ran: each component receives exactly one of the five events per operation. A stop announces `component_stop_skipped` for the components it will not stop, in stop order, before stopping the ones which are standing, so a shutdown trace names every component whether the system was fully started, partly started or never started at all. Stopping a component which never started is never attempted, because a stop function is written against what its start created.
 
-`'started'` and `'unstarted'` are states rather than histories: a component is skipped as `'unstarted'` whether it never started or has since stopped, and skipped as `'started'` when a start finds it already standing. A system which has already stopped therefore announces exactly what a system which never started announces, which is what the two being the same state should mean.
+`'started'` and `'stopped'` are states rather than histories: a component is skipped as `'stopped'` whether it never started or has since stopped, and skipped as `'started'` when a start finds it already standing. A system which has already stopped therefore announces exactly what a system which never started announces, which is what the two being the same state should mean.
 
 ### System events
 
