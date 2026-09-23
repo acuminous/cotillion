@@ -69,17 +69,22 @@ Each component lives in its own file, behind the same small shape.
 ```ts
 import pg from 'pg';
 
-export let client: pg.Client;
+let client: pg.Client | undefined;
 
 export const postgres = {
   name: 'postgres',
+  get component(): pg.Client {
+    if (!client) throw new Error('postgres has not started');
+    return client;
+  },
   async start() {
     client = new pg.Client({ connectionString: process.env.DATABASE_URL });
     await client.connect();
     return client;
   },
   async stop() {
-    await client.end();
+    await client?.end();
+    client = undefined;
   },
 };
 ```
@@ -88,7 +93,7 @@ export const postgres = {
 
 ```ts
 import { createServer, type Server } from 'node:http';
-import { client } from './postgres.ts';
+import { postgres } from './postgres.ts';
 import { handle } from '../handle.ts';
 
 let server: Server;
@@ -96,7 +101,7 @@ let server: Server;
 export const httpServer = {
   name: 'httpServer',
   async start() {
-    server = createServer((req, res) => handle(req, res, client));
+    server = createServer((req, res) => handle(req, res, postgres.component));
     await new Promise<void>((resolve, reject) => server.listen(3000).once('listening', resolve).once('error', reject));
     return server;
   },
@@ -131,7 +136,7 @@ await client.query('select 1');
 console.log('listening', server.address());
 ```
 
-The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. The wiring between components stays plain code: the postgres module exports its client and the HTTP server imports it.
+The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. The wiring between components stays plain code, done by the module system: the postgres definition exposes the client its start created through a getter, and the HTTP server imports the definition and reads `postgres.component` as each request arrives. The getter is typed as a connected client rather than one which might not exist yet, and throws if read before postgres has started, which the declared order rules out: postgres starts before the HTTP server and stops after it, so every request finds a connected client.
 
 ## Defining components
 
@@ -154,7 +159,7 @@ const emailListener = {
 - `start` and `stop` are optional; a missing function is skipped. Both receive an AbortSignal, described under [Timeouts](#timeouts). Whatever start returns is the component, and is collected into the object `start()` resolves to.
 - `timeout` is optional: a number of milliseconds bounding both start and stop, or an object with `start`, `stop` and `abort` keys, each omissible. `start` and `stop` bound the invocations themselves; `abort` bounds how long cotillion waits for an aborted invocation to wind down. There are no defaults; see [Timeouts](#timeouts) and [Aborting](#aborting).
 
-Cotillion imposes nothing else. Components hold their own state, and you wire dependencies between them in plain code, as in the quick start above. The array of definitions, nested groups and all, is the system definition, and it is the only argument `createSystem` takes.
+Cotillion imposes nothing else. Components hold their own state, and you wire dependencies between them in plain code, as in the quick start above. A definition is a plain object, so it can carry whatever else its module wants to expose, such as the `component` getter through which the quick start's HTTP server reaches the postgres client. The array of definitions, nested groups and all, is the system definition, and it is the only argument `createSystem` takes.
 
 ## Starting and stopping
 
