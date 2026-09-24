@@ -98,7 +98,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - Then migrate has not started
 - And migrate has stopped once
 
-## Rule: A start is given an abort signal, and a stop is given nothing
+## Rule: A start is given the components started so far and an abort signal, and a stop is given nothing
 
 ### Scenario: The arguments the lifecycle functions receive
 
@@ -107,9 +107,36 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And each component stops
 - When the system is started
 - And the system is stopped
-- Then postgres's start was given an abort signal which has not fired
+- Then postgres's start was given no components
+- And postgres's start was given an abort signal which has not fired
 - And postgres's start was given no other arguments
 - And postgres's stop was given no arguments
+
+### Scenario: Each start is given the components which had started before it
+
+- Given the components postgres, migrate, emailListener, httpServer
+- And postgres starts with a connection
+- And migrate has no start function
+- And emailListener starts with a subscription
+- And httpServer starts with a listener
+- When the system is started
+- Then postgres's start was given no components
+- And emailListener's start was given the components:
+
+  | name     | component    |
+  |----------|--------------|
+  | postgres | a connection |
+  | migrate  |              |
+
+- And httpServer's start was given the components:
+
+  | name          | component      |
+  |---------------|----------------|
+  | postgres      | a connection   |
+  | migrate       |                |
+  | emailListener | a subscription |
+
+- And the components given to httpServer's start are frozen
 
 ## Rule: Starting resolves to the components, keyed by name
 

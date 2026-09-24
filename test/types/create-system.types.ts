@@ -17,7 +17,9 @@ const restarted: Promise<Components> = system.restart();
 
 const bounded: System = createSystem([], { timeout: 30000 });
 const boundedSeparately: System = createSystem([], { timeout: { start: 30000, stop: 10000 } });
-const abortable: System = createSystem([{ name: 'postgres', abortable: true, async start(signal: AbortSignal) {} }]);
+const abortable: System = createSystem([
+  { name: 'postgres', abortable: true, async start(components: Components, signal: AbortSignal) {} },
+]);
 
 const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
 const timedOutName: 'TimeoutError' = timedOut instanceof TimeoutError ? timedOut.name : 'TimeoutError';
@@ -35,15 +37,20 @@ system.on('component_start_skipped', ({ name, reason }) => `${name} ${reason}`);
 const postgres = {
   name: 'postgres',
   timeout: { start: 5000, stop: 30000 },
-  async start(signal: AbortSignal) {
-    return signal.aborted;
+  async start(components: Components, signal: AbortSignal) {
+    return { connected: !signal.aborted };
   },
   async stop() {},
 };
 
 const migrate = { name: 'migrate' };
 const emailListener = { name: 'emailListener', timeout: 5000 };
-const httpServer = { name: 'httpServer' };
+const httpServer = {
+  name: 'httpServer',
+  async start({ postgres }: { postgres: { connected: boolean } }) {
+    return postgres.connected;
+  },
+};
 
 const nested: System = createSystem([postgres, [[migrate, emailListener], httpServer]]);
 
@@ -70,6 +77,9 @@ const systemAbortTimeout: System = createSystem([], { timeout: { abort: 1000 } }
 
 // @ts-expect-error a stop is never interrupted, so it is given nothing
 const stopExpectingASignal: System = createSystem([{ name: 'postgres', async stop(signal: AbortSignal) {} }]);
+
+// @ts-expect-error a start is given the components started so far first, and its abort signal second
+const startExpectingTheSignalFirst: System = createSystem([{ name: 'postgres', async start(signal: AbortSignal) {} }]);
 
 // @ts-expect-error abortable is a flag, not a description
 const abortableWhichIsNotABoolean: System = createSystem([{ name: 'postgres', abortable: 'yes' }]);

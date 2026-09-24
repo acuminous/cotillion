@@ -24,16 +24,6 @@ const hangsWhile = {
   stop: (recorder, entry) => recorder.hangsWhileStopping(entry),
 };
 
-const argumentsOf = {
-  start: (recorder, name) => recorder.startArguments(name),
-  stop: (recorder, name) => recorder.stopArguments(name),
-};
-
-const signalOf = {
-  start: (recorder, name) => recorder.startSignal(name),
-  stop: (recorder, name) => recorder.stopSignal(name),
-};
-
 const componentErrorOf = {
   start: (recorder, name) => recorder.startError(name),
   stop: (recorder, name) => recorder.stopError(name),
@@ -202,26 +192,32 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then('$component has stopped $count', ({ world }, name, count) => {
     eq(componentRecorderOf(world).stopCount(name), count);
   })
-  .then("$component's $lifecycle was given an abort signal which has not fired", ({ world }, name, lifecycle) => {
-    const [signal] = argumentsOf[lifecycle](componentRecorderOf(world), name);
+  .then("$component's start was given an abort signal which has not fired", ({ world }, name) => {
+    const [, signal] = componentRecorderOf(world).startArguments(name);
     ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
-    eq(signalOf[lifecycle](componentRecorderOf(world), name).fired, false, `${name}'s ${lifecycle} signal fired`);
+    eq(componentRecorderOf(world).startSignal(name).fired, false, `${name}'s start signal fired`);
   })
-  .then(
-    "$component's $lifecycle was given an abort signal which has fired with that error",
-    ({ world }, name, lifecycle) => {
-      const [signal] = argumentsOf[lifecycle](componentRecorderOf(world), name);
-      ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
-      const { fired, reason } = signalOf[lifecycle](componentRecorderOf(world), name);
-      ok(fired, `${name}'s ${lifecycle} signal did not fire`);
-      eq(reason, world.rejection);
-    },
-  )
+  .then("$component's start was given an abort signal which has fired with that error", ({ world }, name) => {
+    const [, signal] = componentRecorderOf(world).startArguments(name);
+    ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
+    const { fired, reason } = componentRecorderOf(world).startSignal(name);
+    ok(fired, `${name}'s start signal did not fire`);
+    eq(reason, world.rejection);
+  })
+  .then("$component's start was given no components", ({ world }, name) => {
+    deq(componentRecorderOf(world).startComponents(name), {});
+  })
+  .then("$component's start was given the components:\n$started", ({ world }, name, rows) => {
+    deq(componentRecorderOf(world).startComponents(name), toComponents(rows));
+  })
+  .then("the components given to $component's start are frozen", ({ world }, name) => {
+    ok(Object.isFrozen(componentRecorderOf(world).startComponents(name)), `${name}'s components can be changed`);
+  })
   .then("$component's start was given no other arguments", ({ world }, name) => {
-    eq(argumentsOf.start(componentRecorderOf(world), name).length, 1);
+    eq(componentRecorderOf(world).startArguments(name).length, 2);
   })
   .then("$component's stop was given no arguments", ({ world }, name) => {
-    eq(argumentsOf.stop(componentRecorderOf(world), name).length, 0);
+    eq(componentRecorderOf(world).stopArguments(name).length, 0);
   })
   .then('the system has started', ({ world }) => {
     ok(lastStart(world).settled, 'the start has not resolved');

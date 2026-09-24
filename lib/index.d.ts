@@ -39,8 +39,8 @@ export interface Timeouts {
 export interface ComponentDefinition {
   name: string;
   abortable?: boolean;
-  start?: (signal: AbortSignal) => unknown;
-  stop?: () => unknown;
+  start?(components: Components, signal: AbortSignal): unknown;
+  stop?(): unknown;
   timeout?: number | Timeouts;
 }
 

@@ -41,7 +41,7 @@ You define components, list them in start order, and create a system:
 
 1. Each component definition has a unique name and asynchronous start and stop functions.
 2. The array defines the order. Nested arrays form groups which run in parallel.
-3. Starting the system runs the start functions in the declared order, sequentially or in parallel groups, bounded by the system's start timeout where one is set, and resolves to an object holding the components those functions produced, keyed by name.
+3. Starting the system runs the start functions in the declared order, sequentially or in parallel groups, bounded by the system's start timeout where one is set, and resolves to an object holding the components those functions produced, keyed by name. Each start function is given the components which had started before it, so one component can take another from there.
 4. Stopping the system runs the stop functions in the reverse order, bounded by the system's stop timeout where one is set.
 5. Stopping the system while it is starting interrupts the start: components which can be aborted are told to, the rest are waited for, and the components not yet reached are skipped.
 6. The system is an event emitter, announcing the progress of each component and of each operation as a whole.
@@ -73,10 +73,6 @@ let client: pg.Client | undefined;
 
 export const postgres = {
   name: 'postgres',
-  get component(): pg.Client {
-    if (!client) throw new Error('postgres has not started');
-    return client;
-  },
   async start() {
     client = new pg.Client({ connectionString: process.env.DATABASE_URL });
     await client.connect();
@@ -93,15 +89,15 @@ export const postgres = {
 
 ```ts
 import { createServer, type Server } from 'node:http';
-import { postgres } from './postgres.ts';
+import type pg from 'pg';
 import { handle } from '../handle.ts';
 
 let server: Server;
 
 export const httpServer = {
   name: 'httpServer',
-  async start() {
-    server = createServer((req, res) => handle(req, res, postgres.component));
+  async start({ postgres }: { postgres: pg.Client }) {
+    server = createServer((req, res) => handle(req, res, postgres));
     await new Promise<void>((resolve, reject) => server.listen(3000).once('listening', resolve).once('error', reject));
     return server;
   },
@@ -136,18 +132,20 @@ await client.query('select 1');
 console.log('listening', server.address());
 ```
 
-The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. The wiring between components stays plain code, done by the module system: the postgres definition exposes the client its start created through a getter, and the HTTP server imports the definition and reads `postgres.component` as each request arrives. The getter is typed as a connected client rather than one which might not exist yet, and throws if read before postgres has started, which the declared order rules out: postgres starts before the HTTP server and stops after it, so every request finds a connected client.
+The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. Each start function is also given the components which had started before it, keyed the same way, so the HTTP server takes the postgres client from its first argument rather than importing the definition. It is typed as a connected client rather than one which might not exist yet, and the declared order makes that so: postgres starts before the HTTP server and stops after it, so every request finds a connected client.
 
 ## Defining components
 
 A component is whatever your start function produces: a connected database client, a subscribed queue listener, a listening HTTP server. You do not hand cotillion those. You hand it a definition of each one, which is a plain object:
 
 ```ts
+import type { Components } from 'cotillion';
+
 const emailListener = {
   name: 'email-listener',
   abortable: true,
   timeout: { start: 5000, stop: 30000 },
-  async start(signal: AbortSignal) {
+  async start(components: Components, signal: AbortSignal) {
     // acquire connections, subscribe, listen
   },
   async stop() {
@@ -157,11 +155,11 @@ const emailListener = {
 ```
 
 - `name` is required and must be unique within the system. It keys the object of [components](#components), identifies the component in [events](#events), and appears in error messages so you can see which component failed, timed out or was aborted. Uniqueness is validated when the system is created.
-- `start` and `stop` are optional; a missing function is skipped. `start` receives an AbortSignal, described under [Stopping during a start](#stopping-during-a-start), which only ever fires if the component is abortable. Whatever start returns is the component, and is collected into the object `start()` resolves to.
+- `start` and `stop` are optional; a missing function is skipped. `start` receives two arguments: the [components](#components) which had started before it, keyed by name, and an AbortSignal, described under [Stopping during a start](#stopping-during-a-start), which only ever fires if the component is abortable. `stop` receives nothing. Whatever start returns is the component, and is collected into the object `start()` resolves to.
 - `abortable` is optional and defaults to false. It declares that the start function observes its signal and settles promptly once the signal fires, so a stop which interrupts the start can abort this component rather than wait for it. Cotillion cannot tell whether a start observes its signal, so declare it only when it does.
 - `timeout` is optional: a number of milliseconds bounding both start and stop, or an object with `start` and `stop` keys, either omissible. There are no defaults; see [Component timeouts](#component-timeouts).
 
-Cotillion imposes nothing else. Components hold their own state, and you wire dependencies between them in plain code, as in the quick start above. A definition is a plain object, so it can carry whatever else its module wants to expose, such as the `component` getter through which the quick start's HTTP server reaches the postgres client. The array of definitions, nested groups and all, is the system definition, and it is the first argument `createSystem` takes; the second, optional, carries the system's [timeouts](#timeouts).
+Cotillion imposes nothing else. Components hold their own state, and a component which depends on another either takes it from the components its start is given, as the quick start's HTTP server does, or wires it in plain code and ignores that argument. A definition is a plain object, so it can carry whatever else its module wants to expose. The array of definitions, nested groups and all, is the system definition, and it is the first argument `createSystem` takes; the second, optional, carries the system's [timeouts](#timeouts).
 
 ## Starting and stopping
 
@@ -190,7 +188,7 @@ Every name appears in the object; a definition with no start function, or whose 
 
 In TypeScript the object is typed: each property has whatever type its start function resolved to, inferred from the definition passed to `createSystem`, so the destructured `postgres` above is a `pg.Client` without a cast.
 
-The components only resolve once the whole system has started, so they cannot wire components to each other mid-start; wiring stays plain code, as in the [quick start](#quick-start). Cotillion never passes one component to another: that would be dependency injection by the back door.
+The same object, as it stood when a start began, is the first argument that start receives: a frozen snapshot of the components which had started before it, with every earlier name present, and `undefined` for a definition with no start function or whose start returned nothing. A component never sees one which started after it, and the entries of a [parallel group](#parallel-groups) receive the snapshot taken before the group began, so siblings do not see each other. This is the whole of cotillion's dependency injection: no container, no registration, and no mapping layer, so a component which wants another reaches it by the name its definition gave it, exactly as the caller of `start()` does.
 
 ## Events
 
@@ -322,7 +320,7 @@ const system = createSystem([
 ]);
 ```
 
-On stop, order reverses around the group: `httpServer` stops first, then the three listeners stop concurrently, then `postgres`.
+On stop, order reverses around the group: `httpServer` stops first, then the three listeners stop concurrently, then `postgres`. Each listener's start is given the components which had started before the group, here `postgres` alone, and `httpServer` is given all four.
 
 Nesting is recursive, alternating between sequential and parallel. The top level is sequential, a nested array runs its entries in parallel, and an array nested inside a parallel group is a sequential chain running alongside its siblings:
 

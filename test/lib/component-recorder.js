@@ -49,7 +49,7 @@ function createComponentRecorder() {
   }
 
   function observeSignal(invocation) {
-    const [signal] = invocation.args;
+    const signal = invocation.args.find((arg) => arg instanceof AbortSignal);
     if (!(signal instanceof AbortSignal)) return;
     const fired = () => {
       invocation.signal = { fired: true, reason: signal.reason };
@@ -104,7 +104,12 @@ function createComponentRecorder() {
 
   function abortStart(name) {
     const invocation = latest(name, 'start');
-    invocation.deferral.reject(invocation.args[0].reason);
+    invocation.deferral.reject(startSignalOf(invocation).reason);
+  }
+
+  function startSignalOf(invocation) {
+    const [, signal] = invocation.args;
+    return signal;
   }
 
   function isStarting(name) {
@@ -140,16 +145,17 @@ function createComponentRecorder() {
     return latest(name, 'start').args;
   }
 
+  function startComponents(name) {
+    const [components] = latest(name, 'start').args;
+    return components;
+  }
+
   function stopArguments(name) {
     return latest(name, 'stop').args;
   }
 
   function startSignal(name) {
     return latest(name, 'start').signal;
-  }
-
-  function stopSignal(name) {
-    return latest(name, 'stop').signal;
   }
 
   function sequence(columns) {
@@ -192,9 +198,9 @@ function createComponentRecorder() {
     startError,
     stopError,
     startArguments,
+    startComponents,
     stopArguments,
     startSignal,
-    stopSignal,
     sequence,
   };
 }
