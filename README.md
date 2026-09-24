@@ -384,7 +384,9 @@ const system = createSystem([
 
 Reversal applies at every level on stop, so a nested sequential chain stops in reverse order while its siblings stop alongside it.
 
-If an entry of a group fails to start, the group is allowed to settle before the system is stopped and the error propagates, so cotillion always knows which components started and stops exactly those. If more than one entry fails, the operation rejects with an `AggregateError` containing every failure.
+If an entry of a group fails to start, the group is allowed to settle before the system is stopped and the error propagates, so cotillion always knows which components started and stops exactly those. If more than one entry fails, the operation rejects with an `AggregateError` containing every failure, whose message names the components: "The components emailListener and smsListener failed to start". A sequence inside a group fails fast within itself, skipping its own remaining members, while its siblings settle. A stop failure inside a group is treated the same way: the group settles, one error propagates as itself and several as an `AggregateError`, and the components started earlier are skipped.
+
+A stop or a timeout which interrupts a group takes precedence over any failure within it: once the group has settled, the outcome is the interruption's, as described under [Stopping during a start](#stopping-during-a-start) and [Timeouts](#timeouts), and a timeout's message names every component that was in flight. Each entry of a group is given the components which had started before the group; a sequence inside a group additionally gives each of its members the ones before it in that sequence.
 
 ## Errors
 

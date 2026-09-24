@@ -15,7 +15,7 @@ const {
 
 const counts = { once: 1, twice: 2 };
 
-const errorTypes = { 'a TimeoutError': TimeoutError, 'an AbortError': AbortError };
+const errorTypes = { 'a TimeoutError': TimeoutError, 'an AbortError': AbortError, 'an AggregateError': AggregateError };
 
 const activities = { starting: 'start', stopping: 'stop' };
 
@@ -57,9 +57,10 @@ const dictionary = new Dictionary()
   .define('value', /(.+)/)
   .define('count', /(once|twice)/, async (word) => counts[word])
   .define('timeout', /(\d+)ms/, async (digits) => Number(digits))
-  .define('error', /(a TimeoutError|an AbortError)/, async (phrase) => errorTypes[phrase])
+  .define('error', /(a TimeoutError|an AbortError|an AggregateError)/, async (phrase) => errorTypes[phrase])
   .define('message', /"([^"]+)"/)
   .define('processEvents', /(.+)/, async (text) => text.split(', '))
+  .define('names', /(.+)/, async (text) => text.split(', '))
   .define('processEvent', /(\w+)/);
 
 module.exports = English.localise(new ContextParamLibrary(dictionary))
@@ -288,6 +289,13 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     ok(error instanceof errorType, `the ${operation} was rejected with ${error.constructor.name}: ${error.message}`);
     eq(error.message, message);
   })
+  .then('that error contains the errors of $names', ({ world }, names) => {
+    const recorder = componentRecorderOf(world);
+    deq(
+      world.rejection.errors,
+      names.map((name) => componentErrorOf[world.rejectedOperation](recorder, name)),
+    );
+  })
   .then('the failed system $lifecycle event carries that error', ({ world }, lifecycle) => {
     eq(world.eventRecorder.errorOf(failedEventOf.system[lifecycle]), world.rejection);
   })
@@ -356,7 +364,7 @@ function componentRecorderOf(world) {
 
 function eachComponent(world, apply) {
   const recorder = componentRecorderOf(world);
-  for (const entry of world.definition) apply(recorder, entry);
+  for (const entry of world.definition.flat(Number.POSITIVE_INFINITY)) apply(recorder, entry);
 }
 
 function trackStart(world, promise) {
@@ -389,6 +397,7 @@ function lastStop(world) {
 }
 
 async function rejectionOf(world, operation) {
+  world.rejectedOperation = operation;
   world.rejection = await lastOperationOf[operation](world).promise.then(refuseResolution, (error) => error);
   world.eventsAtRejection = world.eventRecorder?.trace(['event']) ?? [];
   return world.rejection;
