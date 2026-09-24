@@ -132,7 +132,46 @@ await client.query('select 1');
 console.log('listening', server.address());
 ```
 
-The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. Each start function is also given the components which had started before it, keyed the same way, so the HTTP server takes the postgres client from its first argument rather than importing the definition. It is typed as a connected client rather than one which might not exist yet, and the declared order makes that so: postgres starts before the HTTP server and stops after it, so every request finds a connected client.
+The entrypoint is a list of component definitions in order, and each component comes back from `system.start`, keyed by name. Each start function is also given the components which had started before it, keyed the same way, so the HTTP server takes the postgres client from its first argument. It is typed as a connected client rather than one which might not exist yet, and the declared order makes that so: postgres starts before the HTTP server and stops after it, so every request finds a connected client.
+
+The wiring can equally stay in plain code, done by the module system. A definition is a plain object, so it can expose the component its start created through a getter, and the HTTP server imports the definition and reads the getter as each request arrives, ignoring the components it was given:
+
+```ts
+export const postgres = {
+  name: 'postgres',
+  get component(): pg.Client {
+    if (!client) throw new Error('postgres has not started');
+    return client;
+  },
+  async start() {
+    client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    return client;
+  },
+  async stop() {
+    await client?.end();
+    client = undefined;
+  },
+};
+```
+
+```ts
+import { postgres } from './postgres.ts';
+
+export const httpServer = {
+  name: 'httpServer',
+  async start() {
+    server = createServer((req, res) => handle(req, res, postgres.component));
+    await new Promise<void>((resolve, reject) => server.listen(3000).once('listening', resolve).once('error', reject));
+    return server;
+  },
+  async stop() {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  },
+};
+```
+
+The getter throws if read before postgres has started, which the declared order rules out. Both styles give the same system; choose per component, and mix them freely.
 
 ## Defining components
 
@@ -159,7 +198,7 @@ const emailListener = {
 - `abortable` is optional and defaults to false. It declares that the start function observes its signal and settles promptly once the signal fires, so a stop which interrupts the start can abort this component rather than wait for it. Cotillion cannot tell whether a start observes its signal, so declare it only when it does.
 - `timeout` is optional: a number of milliseconds bounding both start and stop, or an object with `start` and `stop` keys, either omissible. There are no defaults; see [Component timeouts](#component-timeouts).
 
-Cotillion imposes nothing else. Components hold their own state, and a component which depends on another either takes it from the components its start is given, as the quick start's HTTP server does, or wires it in plain code and ignores that argument. A definition is a plain object, so it can carry whatever else its module wants to expose. The array of definitions, nested groups and all, is the system definition, and it is the first argument `createSystem` takes; the second, optional, carries the system's [timeouts](#timeouts).
+Cotillion imposes nothing else. Components hold their own state, and a component which depends on another either takes it from the components its start is given, or reaches it in plain code and ignores that argument; the [quick start](#quick-start) shows both. A definition is a plain object, so it can carry whatever else its module wants to expose, such as the `component` getter in the second of those. The array of definitions, nested groups and all, is the system definition, and it is the first argument `createSystem` takes; the second, optional, carries the system's [timeouts](#timeouts).
 
 ## Starting and stopping
 
