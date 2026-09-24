@@ -347,6 +347,8 @@ The first line matters. A start which fails stops the system, and that stop usua
 
 Call `stopOn` before starting, as in the [quick start](#quick-start): a termination signal can arrive while the system is still starting. An event received mid-start interrupts the start as described under [Stopping during a start](#stopping-during-a-start), then stops whatever had started, announcing the outcome through the same system events; the `start()` a caller is awaiting rejects with an `AbortError` only once that stop has finished, by which time the exit listener has ended the process, so a top-level `await system.start()` needs no handling of its own. An event received before any operation stops a never-started system, which resolves, and announces `system_stop_succeeded`, immediately.
 
+With the exit listeners wired, `start()` never rejects into your code at all, for a failed component either, because the stop which follows announces its outcome, and the listener exits, before the rejection is delivered. Log a failed start from a `component_start_failed` or `system_start_failed` listener, then, rather than from a catch. A catch around `start()` is reached only in a process which does not exit from its listeners, such as a test or an embedded use, and there it should expect an `AbortError` as well as a component's own error.
+
 `stopOn` returns a function which unbinds the listeners again. It validates its arguments eagerly: at least one event, each a string.
 
 A stop begun by a process event has no caller to receive its outcome, so it announces the outcome only through the system events, and never as an unhandled rejection: a stop which fails or times out after a termination signal reaches your `system_stop_failed` listener and nothing else.
