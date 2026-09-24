@@ -171,12 +171,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then(['there are no components', 'the start resolved to no components'], async ({ world }) => {
     deq(await lastStart(world).promise, {});
   })
-  .then(
-    ['the components are:\n$started', 'the start resolved to the components:\n$started'],
-    async ({ world }, rows) => {
-      deq(await lastStart(world).promise, toComponents(rows));
-    },
-  )
+  .then('the components are:\n$started', async ({ world }, rows) => {
+    deq(await lastStart(world).promise, toComponents(rows));
+  })
   .then('$component is starting', ({ world }, name) => {
     ok(componentRecorderOf(world).isStarting(name), `${name} is not starting`);
   })

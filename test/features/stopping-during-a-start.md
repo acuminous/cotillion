@@ -10,7 +10,7 @@ the stop then proceeds through whatever started.
 An interrupted start is not a failure, so it announces no outcome of its own. The events tell it
 in the order it happened: the stop announces itself as soon as it is called, the component events
 follow as the start winds down, then the stops run, then the stop announces its outcome. The start
-resolves once the stop has finished, to the components as the stop left them.
+resolves once the stop has finished, whatever its outcome, to an empty object.
 
 ## Background:
 
@@ -209,12 +209,7 @@ resolves once the stop has finished, to the components as the stop left them.
 - And postgres has started
 - And the system stops
 - Then the stop is rejected with a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
-- And the start resolved to the components:
-
-  | name     | component |
-  |----------|-----------|
-  | postgres |           |
-
+- And the start resolved to no components
 - And emailListener's failed start event carries a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
 - And the failed system stop event carries a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
 - And postgres has not stopped
