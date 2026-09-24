@@ -298,6 +298,63 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
   | stop      | httpServer    |
   | stop      | emailListener |
 
+## Rule: Until a stop has succeeded, starting returns the previous start
+
+### Scenario: Starting a system which is stopping
+
+- Given the components postgres
+- And each component starts
+- And each component stops on demand
+- When the system is started
+- And the system stops
+- And the system starts
+- Then postgres has started once
+- And both starts resolve to the same components
+- When postgres has stopped
+- Then the system has stopped
+- And the recorded events are:
+
+  | event                     |
+  |---------------------------|
+  | system_start_initiated    |
+  | component_start_initiated |
+  | component_start_succeeded |
+  | system_start_succeeded    |
+  | system_stop_initiated     |
+  | component_stop_initiated  |
+  | component_stop_succeeded  |
+  | system_stop_succeeded     |
+
+### Scenario: Starting after a stop which failed
+
+- Given the components postgres, httpServer
+- And each component starts
+- And each component stops on demand
+- When the system is started
+- And the system stops
+- And httpServer has stopped
+- And postgres has failed to stop
+- Then the stop is rejected with postgres's error
+- When the system starts
+- Then httpServer has started once
+- And both starts resolve to the same components
+- And the recorded events are:
+
+  | event                     | component  |
+  |---------------------------|------------|
+  | system_start_initiated    |            |
+  | component_start_initiated | postgres   |
+  | component_start_succeeded | postgres   |
+  | component_start_initiated | httpServer |
+  | component_start_succeeded | httpServer |
+  | system_start_succeeded    |            |
+  | system_stop_initiated     |            |
+  | component_stop_initiated  | httpServer |
+  | component_stop_succeeded  | httpServer |
+  | component_stop_initiated  | postgres   |
+  | component_stop_failed     | postgres   |
+  | system_stop_failed        |            |
+
 ## Rule: A stop which did not finish can be retried
 
 ### Scenario: Stopping again after a stop which failed
