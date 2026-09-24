@@ -79,6 +79,15 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('a system with no components', ({ world }) => {
     world.definition = [];
   })
+  .given('the system has a timeout of $timeout', ({ world }, timeout) => {
+    optionsOf(world).timeout = timeout;
+  })
+  .given('the system has a start timeout of $timeout', ({ world }, timeout) => {
+    optionsOf(world).timeout = { ...optionsOf(world).timeout, start: timeout };
+  })
+  .given('the system has a stop timeout of $timeout', ({ world }, timeout) => {
+    optionsOf(world).timeout = { ...optionsOf(world).timeout, stop: timeout };
+  })
   .given('$component starts with $value', ({ world }, name, value) => {
     componentRecorderOf(world).startsWith(definitionNamed(world.definition, name), value);
   })
@@ -147,14 +156,8 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .when('the system is restarted', async ({ world }) => {
     await trackStart(world, systemOf(world).restart());
   })
-  .when('the system starts with a timeout of $timeout', ({ world }, timeout) => {
-    trackStart(world, systemOf(world).start({ timeout }));
-  })
-  .when('the system stops with a timeout of $timeout', ({ world }, timeout) => {
-    trackStop(world, systemOf(world).stop({ timeout }));
-  })
-  .when('the system restarts with a timeout of $timeout', ({ world }, timeout) => {
-    trackStart(world, systemOf(world).restart({ timeout }));
+  .when('the system restarts', ({ world }) => {
+    trackStart(world, systemOf(world).restart());
   })
   .when(['the system is aborted', 'the system is aborted again'], ({ world }) => {
     systemOf(world).abort();
@@ -269,8 +272,14 @@ function abortWhen(world, event, name) {
 }
 
 function systemOf(world) {
-  world.system ??= recordEvents(world, createSystem(world.definition));
+  world.system ??= recordEvents(world, createSystem(world.definition, world.options));
   return world.system;
+}
+
+function optionsOf(world) {
+  if (world.system) throw new Error('the system has already been created, so its options can no longer change');
+  world.options ??= {};
+  return world.options;
 }
 
 function recordEvents(world, system) {

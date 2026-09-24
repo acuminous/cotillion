@@ -40,25 +40,31 @@ export interface Timeouts {
 
 export interface ComponentDefinition {
   name: string;
+  abortable?: boolean;
   start?: (signal: AbortSignal) => unknown;
   stop?: (signal: AbortSignal) => unknown;
   timeout?: number | Timeouts;
+}
+
+export interface SystemTimeouts {
+  start?: number;
+  stop?: number;
+}
+
+export interface SystemOptions {
+  timeout?: number | SystemTimeouts;
 }
 
 export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
 
 export type Components = { [name: string]: unknown };
 
-export interface OperationOptions {
-  timeout?: number;
-}
-
 export interface System {
   on(event: ComponentEventName, listener: (payload: ComponentEventPayload) => void): this;
   on(event: SystemEventName, listener: (error?: Error) => void): this;
-  start(options?: OperationOptions): Promise<Components>;
-  stop(options?: OperationOptions): Promise<void>;
-  restart(options?: OperationOptions): Promise<Components>;
+  start(): Promise<Components>;
+  stop(): Promise<void>;
+  restart(): Promise<Components>;
   abort(): void;
 }
 
@@ -70,4 +76,4 @@ export class AbortError extends Error {
   readonly name: 'AbortError';
 }
 
-export function createSystem(definition: SystemDefinition): System;
+export function createSystem(definition: SystemDefinition, options?: SystemOptions): System;

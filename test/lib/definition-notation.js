@@ -28,8 +28,11 @@ function toEntry(token) {
   return { name: token };
 }
 
+const literals = { true: true, false: false };
+
 function parseValue(token) {
   if (token.startsWith('"')) return token.slice(1, -1);
+  if (token in literals) return literals[token];
   return Number(token);
 }
 

@@ -28,6 +28,21 @@ and the first violation is the one reported.
 - When the system is created
 - Then the system is accepted
 
+### Scenario: A system declaring its timeouts
+
+- Given the components postgres
+- And the system has a start timeout of 30000
+- And the system has a stop timeout of 10000
+- When the system is created
+- Then the system is accepted
+
+### Scenario: A component declaring itself abortable
+
+- Given the components postgres
+- And postgres has an abortable of true
+- When the system is created
+- Then the system is accepted
+
 ## Rule: Every entry defines a component
 
 ### Scenario: An entry which is not an object
@@ -92,6 +107,15 @@ and the first violation is the one reported.
 | start     |
 | stop      |
 
+## Rule: A component's abortable flag is a boolean
+
+### Scenario: An abortable flag which is not a boolean
+
+- Given the components postgres
+- And postgres has an abortable of "yes"
+- When the system is created
+- Then the system is rejected with "The component postgres has an abortable flag which is not a boolean"
+
 ## Rule: Timeouts are positive numbers
 
 ### Scenario: A timeout of [timeout]
@@ -130,3 +154,48 @@ and the first violation is the one reported.
 - And postgres has a finish timeout of 1000
 - When the system is created
 - Then the system is rejected with "The component postgres has an unknown timeout key: finish"
+
+## Rule: The system's options are well formed
+
+### Scenario: A system timeout of [timeout]
+
+- Given the components postgres
+- And the system has a timeout of [timeout]
+- When the system is created
+- Then the system is rejected with "The system has a timeout which is not a positive number"
+
+### Examples:
+
+| timeout |
+|---------|
+| "soon"  |
+| -1      |
+| 0       |
+
+### Scenario: The system's [key] timeout is not a positive number
+
+- Given the components postgres
+- And the system has a [key] timeout of -1
+- When the system is created
+- Then the system is rejected with "The system has a [key] timeout which is not a positive number"
+
+### Examples:
+
+| key   |
+|-------|
+| start |
+| stop  |
+
+### Scenario: A system timeout key cotillion does not recognise
+
+- Given the components postgres
+- And the system has an abort timeout of 1000
+- When the system is created
+- Then the system is rejected with "The system has an unknown timeout key: abort"
+
+### Scenario: An option cotillion does not recognise
+
+- Given the components postgres
+- And the system has an option called timeouts
+- When the system is created
+- Then the system is rejected with "The system has an unknown option: timeouts"

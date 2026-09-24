@@ -15,9 +15,9 @@ const components: Promise<Components> = system.start();
 const stopped: Promise<void> = system.stop();
 const restarted: Promise<Components> = system.restart();
 
-const boundedStart: Promise<Components> = system.start({ timeout: 30000 });
-const boundedStop: Promise<void> = system.stop({ timeout: 10000 });
-const boundedRestart: Promise<Components> = system.restart({ timeout: 30000 });
+const bounded: System = createSystem([], { timeout: 30000 });
+const boundedSeparately: System = createSystem([], { timeout: { start: 30000, stop: 10000 } });
+const abortable: System = createSystem([{ name: 'postgres', abortable: true, async start(signal: AbortSignal) {} }]);
 
 const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
 const timedOutName: 'TimeoutError' = timedOut instanceof TimeoutError ? timedOut.name : 'TimeoutError';
@@ -63,8 +63,14 @@ const timeoutWhichIsNotANumber: System = createSystem([{ name: 'postgres', timeo
 // @ts-expect-error start is a function, not a description
 const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start: 'soon' }]);
 
-// @ts-expect-error an operation's timeout is a number of milliseconds, not a description
-system.start({ timeout: 'soon' });
+// @ts-expect-error a system timeout is a number of milliseconds, not a description
+const systemTimeoutWhichIsNotANumber: System = createSystem([], { timeout: 'soon' });
+
+// @ts-expect-error the system's timeouts are start and stop; nothing about a system is aborted
+const systemAbortTimeout: System = createSystem([], { timeout: { abort: 1000 } });
+
+// @ts-expect-error abortable is a flag, not a description
+const abortableWhichIsNotABoolean: System = createSystem([{ name: 'postgres', abortable: 'yes' }]);
 
 // @ts-expect-error the system announces system_start_succeeded, not system_started
 system.on('system_started', () => {});

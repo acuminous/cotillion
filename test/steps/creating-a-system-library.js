@@ -14,7 +14,7 @@ const dictionary = new Dictionary()
   .define('component', /(\w+)/)
   .define('lifecycle', /(start|stop)/)
   .define('key', /(\w+)/)
-  .define('value', /(-?\d+|"[^"]*")/, async (token) => parseValue(token))
+  .define('value', /(-?\d+|"[^"]*"|true|false)/, async (token) => parseValue(token))
   .define('message', /"([^"]+)"/);
 
 module.exports = English.localise(new ContextParamLibrary(dictionary))
@@ -37,11 +37,23 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('$component has a timeout of $value', ({ world }, name, value) => {
     definitionNamed(world.definition, name).timeout = value;
   })
+  .given('$component has an abortable of $value', ({ world }, name, value) => {
+    definitionNamed(world.definition, name).abortable = value;
+  })
+  .given('the system has a timeout of $value', ({ world }, value) => {
+    optionsOf(world).timeout = value;
+  })
+  .given('the system has an? $key timeout of $value', ({ world }, key, value) => {
+    optionsOf(world).timeout = { ...optionsOf(world).timeout, [key]: value };
+  })
+  .given('the system has an option called $key', ({ world }, key) => {
+    optionsOf(world)[key] = 1000;
+  })
   .given('$component has an? $key timeout of $value', ({ world }, name, key, value) => {
     definitionNamed(world.definition, name).timeout = { [key]: value };
   })
   .when('the system is created', ({ world }) => {
-    world.error = errorFrom(() => createSystem(world.definition));
+    world.error = errorFrom(() => createSystem(world.definition, world.options));
   })
   .then('the system is accepted', ({ world }) => {
     eq(world.error, undefined);
@@ -50,6 +62,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     ok(world.error, 'the system was accepted');
     eq(world.error.message, message);
   });
+
+function optionsOf(world) {
+  world.options ??= {};
+  return world.options;
+}
 
 function errorFrom(operation) {
   try {

@@ -20,6 +20,8 @@ a test, and the module layout stays as small as that specification allows.
 | lib/errors.js              | the public error types                                                           |
 | lib/deadline.js            | an operation's deadline: its timer and signal, abort, and the wind-down of a wait |
 | lib/validate-definition.js | the eager validation createSystem applies to the system definition               |
+| lib/validate-options.js    | the eager validation createSystem applies to its options                         |
+| lib/validate-timeout.js    | the timeout shape check the two validations share                                |
 | lib/index.d.ts             | the hand-written type definitions, importing nothing                             |
 
 The table grows as the implementation lands; the conventions below are binding from the first

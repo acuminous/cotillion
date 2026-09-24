@@ -18,8 +18,10 @@ All notable changes to cotillion are documented here. The format follows
 - `createSystem` validates the system definition and throws rather than returning a system
   which would fail later (#2). It checks that every entry is an object with a string name, that
   names are unique throughout the definition including inside nested groups at any depth, that start
-  and stop are functions where present, and that timeouts are positive numbers under the three
-  known keys. The message names the offending component, or its position when it has no usable
+  and stop are functions where present, that an abortable flag, where present, is a boolean, and
+  that timeouts are positive numbers under the known keys. The options, where given, are checked
+  the same way: a system timeout is a positive number under the start and stop keys, and an
+  unknown option is rejected. The message names the offending component, or its position when it has no usable
   name, and the first violation in declaration order is the one reported. In TypeScript the
   same rules are enforced at compile time: an unknown timeout key or a start which is not a
   function will not typecheck.
@@ -101,19 +103,19 @@ All notable changes to cotillion are documented here. The format follows
   `stop()` being completely silent, a listener which logs or exits will now fire for it, which
   is the point.
 
-- Each operation can be given an overall timeout (#8): `start`, `stop` and `restart` accept
-  `{ timeout }` in milliseconds, and omitting it means cotillion waits for as long as the
-  components take. The timeout bounds the whole operation rather than each component. When it
+- A system can be given a start timeout and a stop timeout when it is created (#8):
+  `createSystem(definition, { timeout: { start: 30000, stop: 10000 } })`, or a single number
+  bounding both, and omitting one means cotillion waits for as long as the components take. The
+  timeout bounds the whole operation rather than each component. When it
   expires the in-flight component's AbortSignal fires, carrying the same error the operation
   rejects with, the components not yet reached are skipped with the reason `timeout`, and the
   operation rejects with a `TimeoutError`, cotillion's own exported class, whose message names
-  the operation, the timeout and the component it was waiting for. A restart's timeout spans
-  the stop and the start, so whatever the stop leaves unspent bounds the start. The interrupted component is
+  the operation, the timeout and the component it was waiting for. A restart is a stop and then
+  a start, each under its own timeout. The interrupted component is
   given the chance to wind down before the operation rejects, described under `abort()` (#10). A
   component cut away while starting is treated as started, so the next `stop()` attempts to
   stop it, and one cut away while stopping is still standing, so the next `stop()` tries it
-  again. A `start()` or `stop()` which joins an operation already in flight joins it under the
-  timeout that operation was given, and its own is ignored.
+  again. A `start()` or `stop()` which joins an operation already in flight joins it.
 
 - `system.abort()` gives up on the operation in progress (#10). The in-flight component's
   AbortSignal fires, the components not yet reached are skipped with the reason `abort`, and once
