@@ -2,10 +2,12 @@
 
 ## Architecture
 
-One entry point, deliberately little behind it. `createSystem(definition)` validates the
-system definition eagerly (unique names throughout, well-formed entries), then hands it to a
-runner which walks it forwards on start and backwards on stop, racing each operation against
-a single AbortSignal derived from the overall timeout or an `abort()` call. The system is
+One entry point, deliberately little behind it. `createSystem(definition, options)` validates
+the system definition eagerly (unique names throughout, well-formed entries) and the options
+(the system's start and stop timeouts), then hands them to a runner which walks the definition
+forwards on start and backwards on stop, each operation bounded by its timeout. A stop which
+arrives during a start interrupts it: abortable components are signalled, the rest are waited
+for, and the stop then proceeds through whatever started. The system is
 an EventEmitter; events are notifications only and must never carry behaviour the promise
 contract does not. The public error types (TimeoutError, AbortError) live in
 their own module. The README is the specification: every behaviour it documents is asserted by
@@ -77,7 +79,7 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
 - **Error messages are part of the contract**: error tests assert the message content, and a
   README test keeps the error table complete in both directions.
 - **The awkward paths are the point of the library**: partial start failure, timeout during a
-  parallel group, abort during stop, a second stop after an aborted one. Each documented
+  parallel group, a stop which interrupts a start, a stop which times out. Each documented
   behaviour was written as a failing test before the code existed. Keep it that way: when a
   check is load-bearing, break the code and watch the test fail.
 - **Follow [yadda's best practices](https://github.com/acuminous/yadda/blob/master/docs/best-practices.md)**,
@@ -117,12 +119,13 @@ entry.
 
 ## Time and cancellation discipline
 
-Each invocation's AbortSignal is derived from the operation's signal (overall timeout or
-`abort()`) and the component's own timeout; all waiting flows through those signals, with
-no polling, no scattered setTimeout calls and no Date.now() in the decision path. Cotillion
+Each start's AbortSignal is derived from the start being interrupted (by a stop or the start
+timeout) and the component's own start timeout, and fires only for a component declared
+abortable; all waiting flows through those signals and the operation deadlines, with no
+polling, no scattered setTimeout calls and no Date.now() in the decision path. Cotillion
 never makes a component stop, it decides how long to keep waiting, and that wait is bounded
-only by what the caller declared: an abort timeout, or a repeated `abort()`. If a new site
-needs to know about cancellation, thread the signal in as a parameter.
+only by what the definition and options declared: the component's timeouts and the system's.
+If a new site needs to know about cancellation, thread the signal in as a parameter.
 
 ## Decisions
 
