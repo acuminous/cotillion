@@ -128,6 +128,37 @@ their errors: a component's names the component, the system's names the operatio
 - Then the start is rejected with a TimeoutError "The component emailListener timed out after 10ms while starting"
 - And emailListener's start was given an abort signal which has not fired
 
+### Scenario: An abortable component which honours its own timeout has still failed
+
+- Given the components postgres, emailListener, httpServer
+- And each component starts
+- And each component stops
+- And emailListener is abortable
+- And emailListener starts on demand
+- And emailListener has a start timeout of 10ms
+- When the system starts
+- And the timeout has expired
+- And emailListener has aborted
+- Then the start is rejected with a TimeoutError "The component emailListener timed out after 10ms while starting"
+- And emailListener's start was given an abort signal which has fired with that error
+- And the recorded events are:
+
+  | event                     | component     | reason  |
+  |---------------------------|---------------|---------|
+  | system_start_initiated    |               |         |
+  | component_start_initiated | postgres      |         |
+  | component_start_succeeded | postgres      |         |
+  | component_start_initiated | emailListener |         |
+  | component_start_failed    | emailListener |         |
+  | component_start_skipped   | httpServer    | failure |
+  | system_start_failed       |               |         |
+  | system_stop_initiated     |               |         |
+  | component_stop_skipped    | httpServer    | failure |
+  | component_stop_skipped    | emailListener | failure |
+  | component_stop_initiated  | postgres      |         |
+  | component_stop_succeeded  | postgres      |         |
+  | system_stop_succeeded     |               |         |
+
 ## Rule: Whichever bound is sooner wins
 
 ### Scenario: A component's start timeout sooner than the system's
