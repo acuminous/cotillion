@@ -19,7 +19,8 @@ a test, and the module layout stays as small as that specification allows.
 | lib/events.js              | the event names, as ComponentEvent and SystemEvent, and the skip reasons         |
 | lib/errors.js              | the public error types                                                           |
 | lib/deadline.js            | an operation's deadline: its timer, its signal, and the interruption it records   |
-| lib/waits.js               | the invocations in flight, how each ended, and the stop timeout deeming one failed |
+| lib/waits.js               | the invocations in flight, how each ended, each component's own timeout, and the stop timeout deeming one failed |
+| lib/timer.js               | a clearable timer which is a no-op without a delay, shared by the deadlines and the waits |
 | lib/validate-definition.js | the eager validation createSystem applies to the system definition               |
 | lib/validate-options.js    | the eager validation createSystem applies to its options                         |
 | lib/validate-timeout.js    | the timeout shape check the two validations share                                |

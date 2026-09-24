@@ -313,7 +313,9 @@ const emailListener = {
 
 A number bounds both functions; the object form bounds them separately, and either key may be omitted. There are no defaults: a component without a timeout is bounded only by the system's timeouts.
 
-A component exceeding its own timeout has **failed**: the invocation rejects with a `TimeoutError`, the corresponding failed event is emitted, and the operation fails fast exactly as if the component had rejected of its own accord. An abortable component's start signal fires as well, so it can release what it had acquired; its stop is never interrupted.
+A component exceeding its own timeout has **failed**: the invocation is deemed to have timed out, its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", and the operation fails fast exactly as if the component had rejected of its own accord: the components not yet reached are skipped with reason `failure`, and a failed start is followed by the automatic stop. The invocation itself runs on unobserved. An abortable component's start signal fires as well, with the same error as its reason, so it can release what it had acquired; a component which is not abortable is simply left behind, and its stop is never interrupted.
+
+Both kinds of timeout apply at once, and whichever bound is sooner wins. The errors tell them apart: a component's names the component, the system's names the operation and the components it was waiting for. A component's own timer keeps running while the system waits out its start after the system's timeout expired, so a component which ignores its signal can still be failed by its own bound before the stop timeout deems it.
 
 ## Stopping during a start
 

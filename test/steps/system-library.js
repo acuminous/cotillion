@@ -119,6 +119,13 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('$component hangs while $activity', ({ world }, name, lifecycle) => {
     hangsWhile[lifecycle](componentRecorderOf(world), definitionNamed(world.definition, name));
   })
+  .given('$component has a timeout of $timeout', ({ world }, name, timeout) => {
+    definitionNamed(world.definition, name).timeout = timeout;
+  })
+  .given('$component has a $lifecycle timeout of $timeout', ({ world }, name, lifecycle, timeout) => {
+    const entry = definitionNamed(world.definition, name);
+    entry.timeout = { ...entry.timeout, [lifecycle]: timeout };
+  })
   .given('$component is abortable', ({ world }, name) => {
     definitionNamed(world.definition, name).abortable = true;
   })
