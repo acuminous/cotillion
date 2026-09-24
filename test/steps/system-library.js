@@ -168,12 +168,15 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     componentRecorderOf(world).abortStart(name);
     await setImmediate();
   })
-  .then('there are no components', async ({ world }) => {
+  .then(['there are no components', 'the start resolved to no components'], async ({ world }) => {
     deq(await lastStart(world).promise, {});
   })
-  .then('the components are:\n$started', async ({ world }, rows) => {
-    deq(await lastStart(world).promise, toComponents(rows));
-  })
+  .then(
+    ['the components are:\n$started', 'the start resolved to the components:\n$started'],
+    async ({ world }, rows) => {
+      deq(await lastStart(world).promise, toComponents(rows));
+    },
+  )
   .then('$component is starting', ({ world }, name) => {
     ok(componentRecorderOf(world).isStarting(name), `${name} is not starting`);
   })
@@ -204,6 +207,15 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     ok(fired, `${name}'s start signal did not fire`);
     eq(reason, world.rejection);
   })
+  .then(
+    "$component's start was given an abort signal which has fired with $error $message",
+    ({ world }, name, errorType, message) => {
+      const { fired, reason } = componentRecorderOf(world).startSignal(name);
+      ok(fired, `${name}'s start signal did not fire`);
+      ok(reason instanceof errorType, `the signal fired with ${reason?.constructor?.name}: ${reason?.message}`);
+      eq(reason.message, message);
+    },
+  )
   .then("$component's start was given no components", ({ world }, name) => {
     deq(componentRecorderOf(world).startComponents(name), {});
   })

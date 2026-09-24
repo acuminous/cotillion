@@ -24,7 +24,7 @@ const abortable: System = createSystem([
 const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
 const timedOutName: 'TimeoutError' = timedOut instanceof TimeoutError ? timedOut.name : 'TimeoutError';
 
-const abortError: Error = new AbortError('The stop was aborted while waiting for postgres to stop');
+const abortError: Error = new AbortError('The start was aborted while waiting for postgres to start');
 const abortedName: 'AbortError' = abortError instanceof AbortError ? abortError.name : 'AbortError';
 
 system.on(SystemEvent.StopSucceeded, () => {});

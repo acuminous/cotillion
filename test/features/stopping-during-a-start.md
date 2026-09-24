@@ -4,12 +4,13 @@ Calling stop() while the system is starting interrupts the start. A component wh
 itself abortable has its signal fired and is waited for: if it rejects it honoured the abort and
 is announced as aborted; if it resolves regardless it is up, is announced as succeeded, and is
 stopped like any other. A component which did not declare itself abortable is never interrupted:
-cotillion waits for its start to finish or fail. The components not yet reached are skipped, the
-start rejects with an AbortError, and the stop then proceeds through whatever started.
+cotillion waits for its start to finish or fail. The components not yet reached are skipped, and
+the stop then proceeds through whatever started.
 
-The system events tell it in the order it happened: the stop announces itself as soon as it is
-called, the start announces its failure once it has wound down, then the stops run. The start
-rejects when its failure is announced; the stop when the stop has finished.
+An interrupted start is not a failure, so it announces no outcome of its own. The events tell it
+in the order it happened: the stop announces itself as soon as it is called, the component events
+follow as the start winds down, then the stops run, then the stop announces its outcome. The start
+resolves once the stop has finished, to the components as the stop left them.
 
 ## Background:
 
@@ -28,13 +29,13 @@ rejects when its failure is announced; the stop when the stop has finished.
 - And the system stops
 - Then the start is still in progress
 - When emailListener has aborted
-- Then the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
+- Then the start is still in progress
 - And the stop is still in progress
-- And the failed system start event carries that error
-- And emailListener's start was given an abort signal which has fired with that error
+- And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And httpServer has not started
 - When postgres has stopped
 - Then the system has stopped
+- And the start resolved to no components
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -46,7 +47,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | system_stop_initiated     |               |        |              |
   | component_start_aborted   | emailListener | abort  | name, reason |
   | component_start_skipped   | httpServer    | abort  | name, reason |
-  | system_start_failed       |               |        | error        |
   | component_stop_skipped    | httpServer    | abort  | name, reason |
   | component_stop_skipped    | emailListener | abort  | name, reason |
   | component_stop_initiated  | postgres      |        | name         |
@@ -63,7 +63,8 @@ rejects when its failure is announced; the stop when the stop has finished.
 - And postgres has started
 - And the system stops
 - And emailListener has failed to start
-- Then the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
+- Then the system has stopped
+- And the start resolved to no components
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -75,7 +76,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | system_stop_initiated     |               |        |              |
   | component_start_aborted   | emailListener | abort  | name, reason |
   | component_start_skipped   | httpServer    | abort  | name, reason |
-  | system_start_failed       |               |        | error        |
   | component_stop_skipped    | httpServer    | abort  | name, reason |
   | component_stop_skipped    | emailListener | abort  | name, reason |
   | component_stop_initiated  | postgres      |        | name         |
@@ -92,8 +92,9 @@ rejects when its failure is announced; the stop when the stop has finished.
 - And postgres has started
 - And the system stops
 - And emailListener has started
-- Then the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
-- And emailListener's start was given an abort signal which has fired with that error
+- Then the system has stopped
+- And the start resolved to no components
+- And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -105,7 +106,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | system_stop_initiated     |               |        |              |
   | component_start_succeeded | emailListener |        | name         |
   | component_start_skipped   | httpServer    | abort  | name, reason |
-  | system_start_failed       |               |        | error        |
   | component_stop_skipped    | httpServer    | abort  | name, reason |
   | component_stop_initiated  | emailListener |        | name         |
   | component_stop_succeeded  | emailListener |        | name         |
@@ -124,7 +124,8 @@ rejects when its failure is announced; the stop when the stop has finished.
 - Then the start is still in progress
 - And emailListener's start was given an abort signal which has not fired
 - When emailListener has started
-- Then the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
+- Then the system has stopped
+- And the start resolved to no components
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -136,7 +137,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | system_stop_initiated     |               |        |              |
   | component_start_succeeded | emailListener |        | name         |
   | component_start_skipped   | httpServer    | abort  | name, reason |
-  | system_start_failed       |               |        | error        |
   | component_stop_skipped    | httpServer    | abort  | name, reason |
   | component_stop_initiated  | emailListener |        | name         |
   | component_stop_succeeded  | emailListener |        | name         |
@@ -151,7 +151,7 @@ rejects when its failure is announced; the stop when the stop has finished.
 - And each component stops
 - And the system is stopped as soon as postgres has started
 - When the system starts
-- Then the start is rejected with an AbortError "The start was aborted"
+- Then the start resolved to no components
 - And emailListener has not started
 - And the recorded events are:
 
@@ -162,7 +162,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | component_start_succeeded | postgres      |        | name         |
   | system_stop_initiated     |               |        |              |
   | component_start_skipped   | emailListener | abort  | name, reason |
-  | system_start_failed       |               |        | error        |
   | component_stop_skipped    | emailListener | abort  | name, reason |
   | component_stop_initiated  | postgres      |        | name         |
   | component_stop_succeeded  | postgres      |        | name         |
@@ -178,8 +177,8 @@ rejects when its failure is announced; the stop when the stop has finished.
 - When the system starts
 - And postgres has started
 - And emailListener has aborted
-- Then the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
-- And emailListener's start was given an abort signal which has fired with that error
+- Then the start resolved to no components
+- And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -191,7 +190,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | system_stop_initiated     |               |        |              |
   | component_start_aborted   | emailListener | abort  | name, reason |
   | component_start_skipped   | httpServer    | abort  | name, reason |
-  | system_start_failed       |               |        | error        |
   | component_stop_skipped    | httpServer    | abort  | name, reason |
   | component_stop_skipped    | emailListener | abort  | name, reason |
   | component_stop_initiated  | postgres      |        | name         |
@@ -211,7 +209,12 @@ rejects when its failure is announced; the stop when the stop has finished.
 - And postgres has started
 - And the system stops
 - Then the stop is rejected with a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
-- And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
+- And the start resolved to the components:
+
+  | name     | component |
+  |----------|-----------|
+  | postgres |           |
+
 - And emailListener's failed start event carries a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
 - And the failed system stop event carries a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
 - And postgres has not stopped
@@ -226,7 +229,6 @@ rejects when its failure is announced; the stop when the stop has finished.
   | system_stop_initiated     |               |         |              |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | abort   | name, reason |
-  | system_start_failed       |               |         | error        |
   | component_stop_skipped    | httpServer    | abort   | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
   | component_stop_skipped    | postgres      | timeout | name, reason |

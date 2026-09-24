@@ -121,7 +121,8 @@ system.on('component_stop_succeeded', ({ name }) => console.log(`${name} stopped
 system.on('component_start_failed', ({ name, error }) => console.error(`${name} failed to start`, error));
 system.on('component_stop_failed', ({ name, error }) => console.error(`${name} failed to stop`, error));
 
-system.on('system_stop_succeeded', () => process.exit(0));
+system.on('system_start_failed', () => { process.exitCode = 1; });
+system.on('system_stop_succeeded', () => process.exit());
 system.on('system_stop_failed', () => process.exit(1));
 
 system.stopOn('SIGTERM', 'SIGINT');
@@ -259,7 +260,7 @@ Both operations account for every component, not only the ones they ran: each co
 |------------------------|----------------------------------------------------------|---------|
 | system_start_initiated | A start has been initiated                               |         |
 | system_start_succeeded | Every component started                                  |         |
-| system_start_failed    | The start rejected, whether failed, timed out or interrupted by a stop | error   |
+| system_start_failed    | The start rejected, whether a component failed or the start timed out | error   |
 | system_stop_initiated  | A stop has been initiated                                |         |
 | system_stop_succeeded  | Every started component stopped                          |         |
 | system_stop_failed     | The stop rejected, whether failed or timed out           | error   |
@@ -268,7 +269,7 @@ The failed system events receive the operation's error, the same one its promise
 
 ```ts
 system.on('component_start_failed', ({ name, error }) => logger.error(`${name} failed to start`, error));
-system.on('system_stop_succeeded', () => process.exit(0));
+system.on('system_stop_succeeded', () => process.exit());
 ```
 
 The names are also exported as `ComponentEvent` and `SystemEvent`, mirroring the two tables above, so you can reach them through your editor rather than remembering them:
@@ -277,7 +278,7 @@ The names are also exported as `ComponentEvent` and `SystemEvent`, mirroring the
 import { ComponentEvent, SystemEvent } from 'cotillion';
 
 system.on(ComponentEvent.StartFailed, ({ name, error }) => logger.error(`${name} failed to start`, error));
-system.on(SystemEvent.StopSucceeded, () => process.exit(0));
+system.on(SystemEvent.StopSucceeded, () => process.exit());
 ```
 
 The two forms are interchangeable, and the rest of this README uses the string literals.
@@ -316,11 +317,11 @@ A component exceeding its own timeout has **failed**: the invocation rejects wit
 
 ## Stopping during a start
 
-Calling `stop()` while the system is starting interrupts the start. Cotillion fires the signal of each in-flight component which declared itself `abortable`, and waits for it to settle: a component which rejects has honoured the abort and is announced as `component_start_aborted`; one which resolves regardless is up, is announced as `component_start_succeeded`, and will be stopped. A component which did not declare itself abortable is never interrupted: cotillion waits for its start to finish or to fail. The components not yet reached are skipped, `start()` rejects with an `AbortError` naming the components whose start was in flight, and then the stop proceeds through whatever started, in reverse order, announcing its outcome as any stop does.
+Calling `stop()` while the system is starting interrupts the start. Cotillion fires the signal of each in-flight component which declared itself `abortable`, and waits for it to settle: a component which rejects has honoured the abort and is announced as `component_start_aborted`; one which resolves regardless is up, is announced as `component_start_succeeded`, and will be stopped. A component which did not declare itself abortable is never interrupted: cotillion waits for its start to finish or to fail. The components not yet reached are skipped, and the stop proceeds through whatever started, in reverse order, announcing its outcome as any stop does.
 
-The system events tell it in the order it happened: `system_stop_initiated` as soon as `stop()` is called, `system_start_failed` once the interrupted start has wound down, then the component stops, then `system_stop_succeeded` or `system_stop_failed`. The `start()` promise rejects when `system_start_failed` fires, and the `stop()` promise when the stop has finished, so a caller who awaits both sees them settle in that order.
+An interrupted start is not a failure: the caller asked for a stop and is getting one, exactly as if the system had finished starting first. It announces no outcome of its own, so the events tell it in the order it happened: `system_stop_initiated` as soon as `stop()` is called, the aborted, succeeded and skipped component events as the start winds down, then the component stops, then `system_stop_succeeded` or `system_stop_failed`. The `start()` promise resolves once the stop has finished, to the components as the stop left them, so a caller awaiting it gets control back with a stopped system; when the stop was a termination signal, the exit listener has usually ended the process first. The signal an abortable component received carries an `AbortError` as its reason, naming the components whose start was in flight, so a component which propagates it can tell an abort from its own failures.
 
-The stop timeout bounds the whole of this, waiting out the interrupted start included. A component which ignores its signal, or was never abortable, and has not finished when the stop timeout expires is deemed to have timed out, as described under [Timeouts](#timeouts): its `component_start_failed` carries the `TimeoutError`, `stop()` rejects with it, and `start()` still rejects with the `AbortError`, because the stop is what interrupted the start and the timeout is the stop's own failure.
+The stop timeout bounds the whole of this, waiting out the interrupted start included. A component which ignores its signal, or was never abortable, and has not finished when the stop timeout expires is deemed to have timed out, as described under [Timeouts](#timeouts): its `component_start_failed` carries the `TimeoutError`, `stop()` rejects with it, and `start()` still resolves once that stop has settled, because the timeout is the stop's failure, not the start's.
 
 There is no other way to interrupt an operation: no `abort()`, and a stop is never aborted, because a stop cut short leaves a component half released. The motivating case is the termination signal which arrives while a deploy is still starting, and [stopping on process events](#process-events) wires it up for you.
 
@@ -334,14 +335,17 @@ system.stopOn('SIGTERM', 'SIGINT');
 
 The events are explicit: cotillion does not presume which process events mean shutdown in your deployment. Termination signals are the usual choice, but any process event will do. The first to arrive stops the system, bounded by the system's stop timeout. Further events change nothing: the stop is already in progress, and its timeout is what bounds it.
 
-Cotillion does not call `process.exit`, and does not presume your exit codes. The stop's outcome arrives as a [system event](#system-events), so exiting stays a one-liner in your hands:
+Cotillion does not call `process.exit`, and does not presume your exit codes. The stop's outcome arrives as a [system event](#system-events), so exiting stays in your hands:
 
 ```ts
-system.on('system_stop_succeeded', () => process.exit(0));
+system.on('system_start_failed', () => { process.exitCode = 1; });
+system.on('system_stop_succeeded', () => process.exit());
 system.on('system_stop_failed', () => process.exit(1));
 ```
 
-Call `stopOn` before starting, as in the [quick start](#quick-start): a termination signal can arrive while the system is still starting. An event received mid-start interrupts the start as described under [Stopping during a start](#stopping-during-a-start), then stops whatever had started, announcing the outcome through the same system events. An event received before any operation stops a never-started system, which resolves, and announces `system_stop_succeeded`, immediately.
+The first line matters. A start which fails stops the system, and that stop usually succeeds, so a `system_stop_succeeded` listener which exits with 0 would report a deploy whose database never connected as a success. Setting the exit code when the start fails, and letting the stop's listener exit with whatever code is set, gets both cases right.
+
+Call `stopOn` before starting, as in the [quick start](#quick-start): a termination signal can arrive while the system is still starting. An event received mid-start interrupts the start as described under [Stopping during a start](#stopping-during-a-start), then stops whatever had started, announcing the outcome through the same system events; the `start()` a caller is awaiting resolves once that stop has finished, so a top-level `await system.start()` needs no handling of its own. An event received before any operation stops a never-started system, which resolves, and announces `system_stop_succeeded`, immediately.
 
 `stopOn` returns a function which unbinds the listeners again.
 
@@ -384,7 +388,7 @@ If an entry of a group fails to start, the group is allowed to settle before the
 |----------------|----------------------------------------------------------------------------------------------------------------------------------|
 | Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. |
 | TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned. |
-| AbortError     | A stop interrupted the start. Thrown by start(); the message names the component, or components, whose start was in flight.        |
+| AbortError     | Never thrown. It is the reason an abortable component's signal carries when a stop interrupts its start; the message names the components whose start was in flight. |
 | AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                          |
 
 A component's own error passes through unwrapped, so your existing error handling keeps working.
