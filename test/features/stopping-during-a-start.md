@@ -10,7 +10,8 @@ the stop then proceeds through whatever started.
 An interrupted start is not a failure, so it announces no outcome of its own. The events tell it
 in the order it happened: the stop announces itself as soon as it is called, the component events
 follow as the start winds down, then the stops run, then the stop announces its outcome. The start
-resolves once the stop has finished, whatever its outcome, to an empty object.
+rejects with an AbortError once the stop has finished, whatever its outcome: not because the start
+failed, but because the caller asked for components and there are none to give.
 
 ## Background:
 
@@ -35,7 +36,7 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - And httpServer has not started
 - When postgres has stopped
 - Then the system has stopped
-- And the start resolved to no components
+- And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -64,7 +65,8 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - And the system stops
 - And emailListener has failed to start
 - Then the system has stopped
-- And the start resolved to no components
+- And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
+- And the start was rejected once the system had stopped
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -93,7 +95,7 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - And the system stops
 - And emailListener has started
 - Then the system has stopped
-- And the start resolved to no components
+- And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
 - And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
@@ -125,7 +127,7 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - And emailListener's start was given an abort signal which has not fired
 - When emailListener has started
 - Then the system has stopped
-- And the start resolved to no components
+- And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
   | event                     | component     | reason | payload      |
@@ -151,7 +153,7 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - And each component stops
 - And the system is stopped as soon as postgres has started
 - When the system starts
-- Then the start resolved to no components
+- Then the start is rejected with an AbortError "The start was aborted"
 - And emailListener has not started
 - And the recorded events are:
 
@@ -177,7 +179,7 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - When the system starts
 - And postgres has started
 - And emailListener has aborted
-- Then the start resolved to no components
+- Then the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
 - And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
@@ -209,7 +211,8 @@ resolves once the stop has finished, whatever its outcome, to an empty object.
 - And postgres has started
 - And the system stops
 - Then the stop is rejected with a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
-- And the start resolved to no components
+- And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
+- And the start was rejected once the system had stopped
 - And emailListener's failed start event carries a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
 - And the failed system stop event carries a TimeoutError "The stop timed out after 10ms waiting for emailListener to start"
 - And postgres has not stopped

@@ -9,8 +9,8 @@ forwards on start and backwards on stop, each operation bounded by its timeout. 
 arrives during a start interrupts it: abortable components are signalled, the rest are waited
 for, and the stop then proceeds through whatever started. The system is
 an EventEmitter; events are notifications only and must never carry behaviour the promise
-contract does not. The public error types (TimeoutError, and AbortError as the reason an
-abortable component's signal carries) live in their own module. The README is the specification: every behaviour it documents is asserted by
+contract does not. The public error types (TimeoutError, AbortError) live in
+their own module. The README is the specification: every behaviour it documents is asserted by
 a test, and the module layout stays as small as that specification allows.
 
 | Module                     | Holds                                                                            |

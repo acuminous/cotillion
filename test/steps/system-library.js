@@ -168,7 +168,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     componentRecorderOf(world).abortStart(name);
     await setImmediate();
   })
-  .then(['there are no components', 'the start resolved to no components'], async ({ world }) => {
+  .then('there are no components', async ({ world }) => {
     deq(await lastStart(world).promise, {});
   })
   .then('the components are:\n$started', async ({ world }, rows) => {
