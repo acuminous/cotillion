@@ -246,7 +246,7 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
   | component_stop_skipped |
   | system_stop_succeeded  |
 
-## Rule: A start which fails leaves the components which had started standing
+## Rule: A start which fails stops the components which had started
 
 ### Scenario: A component fails to start
 
@@ -256,14 +256,16 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And emailListener fails to start
 - When the system starts
 - Then the start is rejected with emailListener's error
+- And the start was rejected once the system had stopped
 - And the recorded invocations are:
 
   | lifecycle | component     |
   |-----------|---------------|
   | start     | postgres      |
   | start     | emailListener |
+  | stop      | postgres      |
 
-### Scenario: Stopping after a start which failed
+### Scenario: Stopping again after a start which failed
 
 - Given the components postgres, emailListener, httpServer
 - And each component starts
@@ -272,7 +274,8 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - When the system starts
 - Then the start is rejected with emailListener's error
 - When the system is stopped
-- Then the recorded invocations are:
+- Then postgres has stopped once
+- And the recorded invocations are:
 
   | lifecycle | component     |
   |-----------|---------------|

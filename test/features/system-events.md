@@ -42,6 +42,7 @@ error, which is the same object the promise rejects with.
 - When the system starts
 - Then the start is rejected with emailListener's error
 - And the failed system start event carries emailListener's error
+- And the start was rejected once the system had stopped
 - And the recorded events are:
 
   | event                     | component     | reason  | payload      |
@@ -53,6 +54,11 @@ error, which is the same object the promise rejects with.
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
   | system_start_failed       |               |         | error        |
+  | system_stop_initiated     |               |         |              |
+  | component_stop_skipped    | httpServer    | failure | name, reason |
+  | component_stop_skipped    | emailListener | failure | name, reason |
+  | component_stop_skipped    | postgres      | missing | name, reason |
+  | system_stop_succeeded     |               |         |              |
 
 ### Scenario: A stop which fails
 

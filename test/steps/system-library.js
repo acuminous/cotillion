@@ -230,18 +230,21 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     ok(!lastOperationOf[operation](world).settled, `the ${operation} has settled`);
   })
   .then("the $lifecycle is rejected with $component's error", async ({ world }, lifecycle, name) => {
-    const error = await rejectionOf(lastOperationOf[lifecycle](world));
+    const error = await rejectionOf(world, lifecycle);
     eq(error, componentErrorOf[lifecycle](componentRecorderOf(world), name));
+  })
+  .then('the $operation was rejected once the system had stopped', ({ world }, operation) => {
+    const stopped = world.eventsAtRejection.filter((entry) => entry.event === SystemEvent.StopSucceeded);
+    ok(stopped.length > 0, `the ${operation} was rejected before the system had stopped`);
   })
   .then("the failed $scope $lifecycle event carries $component's error", ({ world }, scope, lifecycle, name) => {
     const announced = announcedErrorOf[scope](world.eventRecorder, failedEventOf[scope][lifecycle], name);
     eq(announced, componentErrorOf[lifecycle](componentRecorderOf(world), name));
   })
   .then('the $operation is rejected with $error $message', async ({ world }, operation, errorType, message) => {
-    const error = await rejectionOf(lastOperationOf[operation](world));
+    const error = await rejectionOf(world, operation);
     ok(error instanceof errorType, `the ${operation} was rejected with ${error.constructor.name}: ${error.message}`);
     eq(error.message, message);
-    world.rejection = error;
   })
   .then('the failed system $lifecycle event carries that error', ({ world }, lifecycle) => {
     eq(world.eventRecorder.errorOf(failedEventOf.system[lifecycle]), world.rejection);
@@ -325,8 +328,10 @@ function lastStop(world) {
   return world.stops.at(-1);
 }
 
-function rejectionOf(operation) {
-  return operation.promise.then(refuseResolution, (error) => error);
+async function rejectionOf(world, operation) {
+  world.rejection = await lastOperationOf[operation](world).promise.then(refuseResolution, (error) => error);
+  world.eventsAtRejection = world.eventRecorder?.trace(['event']) ?? [];
+  return world.rejection;
 }
 
 function refuseResolution() {

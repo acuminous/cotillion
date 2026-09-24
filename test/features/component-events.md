@@ -241,8 +241,13 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
   | system_start_failed       |               |         | error        |
+  | system_stop_initiated     |               |         |              |
+  | component_stop_skipped    | httpServer    | failure | name, reason |
+  | component_stop_skipped    | emailListener | failure | name, reason |
+  | component_stop_skipped    | postgres      | missing | name, reason |
+  | system_stop_succeeded     |               |         |              |
 
-### Scenario: Stopping after a start which failed
+### Scenario: Stopping again after a start which failed
 
 - Given the components postgres, emailListener, httpServer
 - And each component starts
@@ -268,6 +273,11 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_stop_initiated  | postgres      |         | name         |
   | component_stop_succeeded  | postgres      |         | name         |
   | system_stop_succeeded     |               |         |              |
+  | system_stop_initiated     |               |         |              |
+  | component_stop_skipped    | httpServer    | stopped | name, reason |
+  | component_stop_skipped    | emailListener | stopped | name, reason |
+  | component_stop_skipped    | postgres      | stopped | name, reason |
+  | system_stop_succeeded     |               |         |              |
 
 ### Scenario: A component with no start function after the one which failed
 
@@ -288,6 +298,11 @@ and a system nobody is listening to behaves exactly like one somebody is.
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | migrate       | failure | name, reason |
   | system_start_failed       |               |         | error        |
+  | system_stop_initiated     |               |         |              |
+  | component_stop_skipped    | migrate       | failure | name, reason |
+  | component_stop_skipped    | emailListener | failure | name, reason |
+  | component_stop_skipped    | postgres      | missing | name, reason |
+  | system_stop_succeeded     |               |         |              |
 
 ### Scenario: A component fails to stop
 

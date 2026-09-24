@@ -48,9 +48,11 @@ All notable changes to cotillion are documented here. The format follows
   takes options yet, so nothing bounds how long a stop will wait.
 
 - Both operations fail fast, and a component's own error reaches the caller unwrapped (#5). If a
-  component's start rejects, the later components are never attempted and the components which
-  had already started stay started, so `system.stop()` afterwards is the recovery path: it stops
-  exactly those, in reverse order, leaving the component which failed to start alone. If a
+  component's start rejects, the later components are never attempted and cotillion stops the
+  system itself: the components which had started are stopped in reverse order, the one which
+  failed is left alone, and only once that stop has finished, announced through the system
+  events like any other, does `start()` reject with the component's error, so there is nothing
+  left for the caller to clean up. If a
   component's stop rejects, the components earlier in the stop order are left untouched and the
   next `stop()` retries from where the failed one left off. Neither operation wraps, aggregates
   or replaces the error it was given, so the object your component rejected with is the object
