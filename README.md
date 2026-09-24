@@ -333,7 +333,7 @@ There is no other way to interrupt an operation: no `abort()`, and a stop is nev
 system.stopOn('SIGTERM', 'SIGINT');
 ```
 
-The events are explicit: cotillion does not presume which process events mean shutdown in your deployment. Termination signals are the usual choice, but any process event will do. The first to arrive stops the system, bounded by the system's stop timeout. Further events change nothing: the stop is already in progress, and its timeout is what bounds it.
+The events are explicit: cotillion does not presume which process events mean shutdown in your deployment. Termination signals are the usual choice, but any process event will do. The first to arrive stops the system, bounded by the system's stop timeout. Further events change nothing while that stop is in progress: they join it, and its timeout is what bounds it. The listeners stay bound for the life of the process, so an event after a `restart()` stops the restarted system too.
 
 Cotillion does not call `process.exit`, and does not presume your exit codes. The stop's outcome arrives as a [system event](#system-events), so exiting stays in your hands:
 
@@ -347,9 +347,9 @@ The first line matters. A start which fails stops the system, and that stop usua
 
 Call `stopOn` before starting, as in the [quick start](#quick-start): a termination signal can arrive while the system is still starting. An event received mid-start interrupts the start as described under [Stopping during a start](#stopping-during-a-start), then stops whatever had started, announcing the outcome through the same system events; the `start()` a caller is awaiting rejects with an `AbortError` only once that stop has finished, by which time the exit listener has ended the process, so a top-level `await system.start()` needs no handling of its own. An event received before any operation stops a never-started system, which resolves, and announces `system_stop_succeeded`, immediately.
 
-`stopOn` returns a function which unbinds the listeners again.
+`stopOn` returns a function which unbinds the listeners again. It validates its arguments eagerly: at least one event, each a string.
 
-Internally, each bound listener re-emits the signal as a private stop event on the system, keyed by a Symbol so it cannot collide with your own events, and the system subscribes to it with `once()`. However many signals arrive, across however many bindings, the system only ever begins one stop.
+A stop begun by a process event has no caller to receive its outcome, so it announces the outcome only through the system events, and never as an unhandled rejection: a stop which fails or times out after a termination signal reaches your `system_stop_failed` listener and nothing else.
 
 ## Parallel groups
 
@@ -386,7 +386,7 @@ If an entry of a group fails to start, the group is allowed to settle before the
 
 | Error          | Thrown when                                                                                                                      |
 |----------------|----------------------------------------------------------------------------------------------------------------------------------|
-| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. |
+| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn given no events, or one which is not a string. |
 | TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned. |
 | AbortError     | A stop interrupted the start. Thrown by start() once the stop has finished, and carried as the reason of each abortable component's signal; the message names the components whose start was in flight. |
 | AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                          |

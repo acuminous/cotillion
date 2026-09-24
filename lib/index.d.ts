@@ -58,6 +58,7 @@ export interface System {
   start(): Promise<Components>;
   stop(): Promise<void>;
   restart(): Promise<Components>;
+  stopOn(...events: string[]): () => void;
 }
 
 export class TimeoutError extends Error {

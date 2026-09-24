@@ -58,7 +58,9 @@ const dictionary = new Dictionary()
   .define('count', /(once|twice)/, async (word) => counts[word])
   .define('timeout', /(\d+)ms/, async (digits) => Number(digits))
   .define('error', /(a TimeoutError|an AbortError)/, async (phrase) => errorTypes[phrase])
-  .define('message', /"([^"]+)"/);
+  .define('message', /"([^"]+)"/)
+  .define('processEvents', /(.+)/, async (text) => text.split(', '))
+  .define('processEvent', /(\w+)/);
 
 module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given("the system's events are recorded", ({ world }) => {
@@ -125,6 +127,16 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .given("the system is stopped as soon as $component's start is initiated", ({ world }, name) => {
     stopWhen(world, ComponentEvent.StartInitiated, name);
+  })
+  .given('the system stops on the process events $processEvents', ({ world }, events) => {
+    stopOnProcessEvents(world, events);
+  })
+  .when('the process emits $processEvent', async ({ world }, event) => {
+    process.emit(event);
+    await setImmediate();
+  })
+  .when('the process events are unbound', ({ world }) => {
+    for (const unbind of world.unbinders) unbind();
   })
   .when('the system starts', ({ world }) => {
     trackStart(world, systemOf(world).start());
@@ -284,12 +296,26 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     await settlementsOf(world.stops);
     ok(world.stops.every(hasSettled), 'a stop has not resolved');
   })
+  .then('the process has no listeners for $processEvent', (_, event) => {
+    eq(process.listenerCount(event), 0);
+  })
   .then('the recorded events are:\n$events', ({ world }, expected) => {
     deq(world.eventRecorder.trace(columnsOf(expected)), expected);
   })
   .then('the recorded invocations are:\n$invocations', ({ world }, expected) => {
     deq(componentRecorderOf(world).sequence(columnsOf(expected)), expected);
   });
+
+let boundElsewhere = [];
+
+function stopOnProcessEvents(world, events) {
+  if (world.unbinders === undefined) {
+    for (const unbind of boundElsewhere) unbind();
+    world.unbinders = [];
+    boundElsewhere = world.unbinders;
+  }
+  world.unbinders.push(systemOf(world).stopOn(...events));
+}
 
 function stopWhen(world, event, name) {
   systemOf(world).on(event, (payload) => {

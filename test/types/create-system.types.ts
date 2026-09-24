@@ -14,6 +14,7 @@ const system: System = createSystem([]);
 const components: Promise<Components> = system.start();
 const stopped: Promise<void> = system.stop();
 const restarted: Promise<Components> = system.restart();
+const unbind: () => void = system.stopOn('SIGTERM', 'SIGINT');
 
 const bounded: System = createSystem([], { timeout: 30000 });
 const boundedSeparately: System = createSystem([], { timeout: { start: 30000, stop: 10000 } });
@@ -80,6 +81,9 @@ const stopExpectingASignal: System = createSystem([{ name: 'postgres', async sto
 
 // @ts-expect-error a start is given the components started so far first, and its abort signal second
 const startExpectingTheSignalFirst: System = createSystem([{ name: 'postgres', async start(signal: AbortSignal) {} }]);
+
+// @ts-expect-error the events are given as arguments, not wrapped in options
+system.stopOn({ events: ['SIGTERM'] });
 
 // @ts-expect-error abortable is a flag, not a description
 const abortableWhichIsNotABoolean: System = createSystem([{ name: 'postgres', abortable: 'yes' }]);

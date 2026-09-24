@@ -55,6 +55,16 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .when('the system is created', ({ world }) => {
     world.error = errorFrom(() => createSystem(world.definition, world.options));
   })
+  .when('the system is asked to stop on no process events', ({ world }) => {
+    world.error = errorFrom(() => createSystem(world.definition).stopOn());
+  })
+  .when('the system is asked to stop on the process event $value', ({ world }, event) => {
+    world.error = errorFrom(() => createSystem(world.definition).stopOn(event));
+  })
+  .then('the request is rejected with $message', ({ world }, message) => {
+    ok(world.error, 'the request was accepted');
+    eq(world.error.message, message);
+  })
   .then('the system is accepted', ({ world }) => {
     eq(world.error, undefined);
   })
