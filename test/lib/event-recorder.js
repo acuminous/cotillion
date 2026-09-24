@@ -3,6 +3,7 @@ const { toStepDataRows } = require('./step-data-table');
 
 function createEventRecorder() {
   const recorded = [];
+  const awaiting = [];
 
   function record(system) {
     listenFor(system, ComponentEvent, componentColumns);
@@ -10,9 +11,25 @@ function createEventRecorder() {
     return system;
   }
 
+  function next(event) {
+    return new Promise((resolve) => {
+      awaiting.push({ event, resolve });
+    });
+  }
+
+  function announce(event) {
+    for (const waiter of awaiting.splice(0)) {
+      if (waiter.event === event) waiter.resolve();
+      else awaiting.push(waiter);
+    }
+  }
+
   function listenFor(system, events, toColumns) {
     for (const event of Object.values(events)) {
-      system.on(event, (payload) => recorded.push({ event, payload, columns: toColumns(event, payload) }));
+      system.on(event, (payload) => {
+        recorded.push({ event, payload, columns: toColumns(event, payload) });
+        announce(event);
+      });
     }
   }
 
@@ -34,7 +51,7 @@ function createEventRecorder() {
     );
   }
 
-  return { record, trace, payloadOf, errorOf };
+  return { record, trace, payloadOf, errorOf, next };
 }
 
 function onlyOne(matches, description) {

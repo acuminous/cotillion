@@ -51,20 +51,11 @@ function createComponentRecorder() {
   function observeSignal(invocation) {
     const [signal] = invocation.args;
     if (!(signal instanceof AbortSignal)) return;
-    invocation.signalFired = new Promise((resolve) => {
-      const fired = () => {
-        invocation.signal = { fired: true, reason: signal.reason };
-        resolve();
-      };
-      if (signal.aborted) return fired();
-      signal.addEventListener('abort', fired);
-    });
-  }
-
-  function untilSignalFires() {
-    const inFlight = invocations.filter((invocation) => !invocation.settled && invocation.signalFired);
-    if (inFlight.length === 0) throw new Error('no invocation is in flight to receive a signal');
-    return Promise.race(inFlight.map((invocation) => invocation.signalFired));
+    const fired = () => {
+      invocation.signal = { fired: true, reason: signal.reason };
+    };
+    if (signal.aborted) return fired();
+    signal.addEventListener('abort', fired);
   }
 
   function rejects(invocation) {
@@ -103,8 +94,17 @@ function createComponentRecorder() {
     latest(name, 'stop').deferral.resolve();
   }
 
+  function failStart(name) {
+    latest(name, 'start').deferral.reject(new Error(`${name} could not start`));
+  }
+
   function failStop(name) {
     latest(name, 'stop').deferral.reject(new Error(`${name} could not stop`));
+  }
+
+  function abortStart(name) {
+    const invocation = latest(name, 'start');
+    invocation.deferral.reject(invocation.args[0].reason);
   }
 
   function isStarting(name) {
@@ -182,7 +182,9 @@ function createComponentRecorder() {
     failsToStop,
     releaseStart,
     releaseStop,
+    failStart,
     failStop,
+    abortStart,
     isStarting,
     isStopping,
     startCount,
@@ -193,7 +195,6 @@ function createComponentRecorder() {
     stopArguments,
     startSignal,
     stopSignal,
-    untilSignalFires,
     sequence,
   };
 }

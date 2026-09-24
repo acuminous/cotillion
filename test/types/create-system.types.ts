@@ -22,7 +22,6 @@ const abortable: System = createSystem([{ name: 'postgres', abortable: true, asy
 const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
 const timedOutName: 'TimeoutError' = timedOut instanceof TimeoutError ? timedOut.name : 'TimeoutError';
 
-system.abort();
 const abortError: Error = new AbortError('The stop was aborted while waiting for postgres to stop');
 const abortedName: 'AbortError' = abortError instanceof AbortError ? abortError.name : 'AbortError';
 
@@ -35,7 +34,7 @@ system.on('component_start_skipped', ({ name, reason }) => `${name} ${reason}`);
 
 const postgres = {
   name: 'postgres',
-  timeout: { start: 5000, stop: 30000, abort: 1000 },
+  timeout: { start: 5000, stop: 30000 },
   async start(signal: AbortSignal) {
     return signal.aborted;
   },
@@ -66,8 +65,11 @@ const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start
 // @ts-expect-error a system timeout is a number of milliseconds, not a description
 const systemTimeoutWhichIsNotANumber: System = createSystem([], { timeout: 'soon' });
 
-// @ts-expect-error the system's timeouts are start and stop; nothing about a system is aborted
+// @ts-expect-error the timeouts are start and stop; nothing is aborted on a timer
 const systemAbortTimeout: System = createSystem([], { timeout: { abort: 1000 } });
+
+// @ts-expect-error a stop is never interrupted, so it is given nothing
+const stopExpectingASignal: System = createSystem([{ name: 'postgres', async stop(signal: AbortSignal) {} }]);
 
 // @ts-expect-error abortable is a flag, not a description
 const abortableWhichIsNotABoolean: System = createSystem([{ name: 'postgres', abortable: 'yes' }]);

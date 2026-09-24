@@ -8,7 +8,6 @@ export enum ComponentEvent {
   StopSucceeded = 'component_stop_succeeded',
   StopFailed = 'component_stop_failed',
   StopSkipped = 'component_stop_skipped',
-  StopAborted = 'component_stop_aborted',
 }
 
 export enum SystemEvent {
@@ -35,24 +34,18 @@ export interface ComponentEventPayload {
 export interface Timeouts {
   start?: number;
   stop?: number;
-  abort?: number;
 }
 
 export interface ComponentDefinition {
   name: string;
   abortable?: boolean;
   start?: (signal: AbortSignal) => unknown;
-  stop?: (signal: AbortSignal) => unknown;
+  stop?: () => unknown;
   timeout?: number | Timeouts;
 }
 
-export interface SystemTimeouts {
-  start?: number;
-  stop?: number;
-}
-
 export interface SystemOptions {
-  timeout?: number | SystemTimeouts;
+  timeout?: number | Timeouts;
 }
 
 export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
@@ -65,7 +58,6 @@ export interface System {
   start(): Promise<Components>;
   stop(): Promise<void>;
   restart(): Promise<Components>;
-  abort(): void;
 }
 
 export class TimeoutError extends Error {

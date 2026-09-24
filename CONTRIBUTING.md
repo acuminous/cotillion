@@ -18,7 +18,8 @@ a test, and the module layout stays as small as that specification allows.
 | lib/index.js               | createSystem, and the public exports                                             |
 | lib/events.js              | the event names, as ComponentEvent and SystemEvent, and the skip reasons         |
 | lib/errors.js              | the public error types                                                           |
-| lib/deadline.js            | an operation's deadline: its timer and signal, abort, and the wind-down of a wait |
+| lib/deadline.js            | an operation's deadline: its timer, its signal, and the interruption it records   |
+| lib/waits.js               | the invocations in flight, how each ended, and the stop timeout deeming one failed |
 | lib/validate-definition.js | the eager validation createSystem applies to the system definition               |
 | lib/validate-options.js    | the eager validation createSystem applies to its options                         |
 | lib/validate-timeout.js    | the timeout shape check the two validations share                                |
@@ -146,14 +147,13 @@ valuable input. Pull requests include automated tests, per the testing conventio
 
 ## Changelog
 
-Every meaningful change updates CHANGELOG.md in the same commit that makes it: a behaviour
-change, a new capability, a deprecation, a bug fixed, a new example. Not internal refactoring
-that nobody consuming the library could observe. The entry says what changed and why it
-matters to somebody using it, not which files moved.
-
-Keep it in the Keep a Changelog sections, under Unreleased until a release is cut. A change
-worth a commit message explaining why is almost always worth a line here, and the commit is
-the moment to write it, not the release.
+The changelog begins with the first release: until then the README says what the library does
+and the closed issues say how it came to. From the first release on, every meaningful change
+updates CHANGELOG.md in the same commit that makes it: a behaviour change, a new capability, a
+deprecation, a bug fixed, a new example. Not internal refactoring that nobody consuming the
+library could observe. The entry says what changed and why it matters to somebody using it, not
+which files moved, kept in the Keep a Changelog sections under Unreleased until a release is
+cut.
 
 ## Gates
 

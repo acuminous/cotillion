@@ -39,8 +39,6 @@ const componentErrorOf = {
   stop: (recorder, name) => recorder.stopError(name),
 };
 
-const succeededSystemEventOf = { start: SystemEvent.StartSucceeded, stop: SystemEvent.StopSucceeded };
-
 const failedEventOf = {
   component: { start: ComponentEvent.StartFailed, stop: ComponentEvent.StopFailed },
   system: { start: SystemEvent.StartFailed, stop: SystemEvent.StopFailed },
@@ -129,17 +127,14 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('$component hangs while $activity', ({ world }, name, lifecycle) => {
     hangsWhile[lifecycle](componentRecorderOf(world), definitionNamed(world.definition, name));
   })
-  .given('$component has an abort timeout of $timeout', ({ world }, name, timeout) => {
-    definitionNamed(world.definition, name).timeout = { abort: timeout };
+  .given('$component is abortable', ({ world }, name) => {
+    definitionNamed(world.definition, name).abortable = true;
   })
-  .given('the system is aborted as soon as $component has started', ({ world }, name) => {
-    abortWhen(world, ComponentEvent.StartSucceeded, name);
+  .given('the system is stopped as soon as $component has started', ({ world }, name) => {
+    stopWhen(world, ComponentEvent.StartSucceeded, name);
   })
-  .given("the system is aborted as soon as $component's start is initiated", ({ world }, name) => {
-    abortWhen(world, ComponentEvent.StartInitiated, name);
-  })
-  .given('the system is aborted as soon as the $lifecycle has succeeded', ({ world }, lifecycle) => {
-    systemOf(world).on(succeededSystemEventOf[lifecycle], () => systemOf(world).abort());
+  .given("the system is stopped as soon as $component's start is initiated", ({ world }, name) => {
+    stopWhen(world, ComponentEvent.StartInitiated, name);
   })
   .when('the system starts', ({ world }) => {
     trackStart(world, systemOf(world).start());
@@ -159,12 +154,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .when('the system restarts', ({ world }) => {
     trackStart(world, systemOf(world).restart());
   })
-  .when(['the system is aborted', 'the system is aborted again'], ({ world }) => {
-    systemOf(world).abort();
-  })
   .when('the timeout has expired', async ({ world }) => {
+    await world.eventRecorder.next(SystemEvent.StopInitiated);
     await setImmediate();
-    await componentRecorderOf(world).untilSignalFires();
   })
   .when('$component has started', async ({ world }, name) => {
     componentRecorderOf(world).releaseStart(name);
@@ -174,8 +166,16 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     componentRecorderOf(world).releaseStop(name);
     await setImmediate();
   })
+  .when('$component has failed to start', async ({ world }, name) => {
+    componentRecorderOf(world).failStart(name);
+    await setImmediate();
+  })
   .when('$component has failed to stop', async ({ world }, name) => {
     componentRecorderOf(world).failStop(name);
+    await setImmediate();
+  })
+  .when('$component has aborted', async ({ world }, name) => {
+    componentRecorderOf(world).abortStart(name);
     await setImmediate();
   })
   .then('there are no components', async ({ world }) => {
@@ -217,8 +217,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
       eq(reason, world.rejection);
     },
   )
-  .then("$component's $lifecycle was given no other arguments", ({ world }, name, lifecycle) => {
-    eq(argumentsOf[lifecycle](componentRecorderOf(world), name).length, 1);
+  .then("$component's start was given no other arguments", ({ world }, name) => {
+    eq(argumentsOf.start(componentRecorderOf(world), name).length, 1);
+  })
+  .then("$component's stop was given no arguments", ({ world }, name) => {
+    eq(argumentsOf.stop(componentRecorderOf(world), name).length, 0);
   })
   .then('the system has started', ({ world }) => {
     ok(lastStart(world).settled, 'the start has not resolved');
@@ -234,8 +237,23 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     eq(error, componentErrorOf[lifecycle](componentRecorderOf(world), name));
   })
   .then('the $operation was rejected once the system had stopped', ({ world }, operation) => {
-    const stopped = world.eventsAtRejection.filter((entry) => entry.event === SystemEvent.StopSucceeded);
-    ok(stopped.length > 0, `the ${operation} was rejected before the system had stopped`);
+    ok(hadStopped(world.eventsAtRejection), `the ${operation} was rejected before the system had stopped`);
+  })
+  .then(
+    "$component's failed $lifecycle event carries $error $message",
+    ({ world }, name, lifecycle, errorType, message) => {
+      const error = world.eventRecorder.payloadOf(failedEventOf.component[lifecycle], name).error;
+      ok(error instanceof errorType, `the event carried ${error?.constructor?.name}: ${error?.message}`);
+      eq(error.message, message);
+    },
+  )
+  .then("$component's failed $lifecycle event carries that error", ({ world }, name, lifecycle) => {
+    eq(world.eventRecorder.payloadOf(failedEventOf.component[lifecycle], name).error, world.rejection);
+  })
+  .then('the failed system $lifecycle event carries $error $message', ({ world }, lifecycle, errorType, message) => {
+    const error = world.eventRecorder.errorOf(failedEventOf.system[lifecycle]);
+    ok(error instanceof errorType, `the event carried ${error?.constructor?.name}: ${error?.message}`);
+    eq(error.message, message);
   })
   .then("the failed $scope $lifecycle event carries $component's error", ({ world }, scope, lifecycle, name) => {
     const announced = announcedErrorOf[scope](world.eventRecorder, failedEventOf[scope][lifecycle], name);
@@ -268,10 +286,14 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     deq(componentRecorderOf(world).sequence(columnsOf(expected)), expected);
   });
 
-function abortWhen(world, event, name) {
+function stopWhen(world, event, name) {
   systemOf(world).on(event, (payload) => {
-    if (payload.name === name) systemOf(world).abort();
+    if (payload.name === name) trackStop(world, systemOf(world).stop());
   });
+}
+
+function hadStopped(events) {
+  return events.some((entry) => entry.event === SystemEvent.StopSucceeded || entry.event === SystemEvent.StopFailed);
 }
 
 function systemOf(world) {

@@ -98,24 +98,18 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - Then migrate has not started
 - And migrate has stopped once
 
-## Rule: Every invocation is given an abort signal
+## Rule: A start is given an abort signal, and a stop is given nothing
 
-### Scenario: The argument a [lifecycle] function receives
+### Scenario: The arguments the lifecycle functions receive
 
 - Given the components postgres
 - And each component starts
 - And each component stops
 - When the system is started
 - And the system is stopped
-- Then postgres's [lifecycle] was given an abort signal which has not fired
-- And postgres's [lifecycle] was given no other arguments
-
-### Examples:
-
-| lifecycle |
-|-----------|
-| start     |
-| stop      |
+- Then postgres's start was given an abort signal which has not fired
+- And postgres's start was given no other arguments
+- And postgres's stop was given no arguments
 
 ## Rule: Starting resolves to the components, keyed by name
 

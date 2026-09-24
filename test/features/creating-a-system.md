@@ -146,14 +146,13 @@ and the first violation is the one reported.
 |---------|-------|
 | a       | start |
 | a       | stop  |
-| an      | abort |
 
 ### Scenario: A timeout key cotillion does not recognise
 
 - Given the components postgres
-- And postgres has a finish timeout of 1000
+- And postgres has an abort timeout of 1000
 - When the system is created
-- Then the system is rejected with "The component postgres has an unknown timeout key: finish"
+- Then the system is rejected with "The component postgres has an unknown timeout key: abort"
 
 ## Rule: The system's options are well formed
 
