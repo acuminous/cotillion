@@ -56,52 +56,7 @@ Cotillion has no production dependencies.
 
 ## Quick start
 
-Each component lives in its own file, behind the same small shape.
-
-**components/postgres.ts**
-
-```ts
-import type { ComponentDefinition } from 'cotillion';
-import pg from 'pg';
-
-let client: pg.Client | undefined;
-
-export const postgres = {
-  name: 'postgres',
-  async start() {
-    client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-    await client.connect();
-    return client;
-  },
-  async stop() {
-    await client?.end();
-    client = undefined;
-  },
-} as const satisfies ComponentDefinition;
-```
-
-**components/http-server.ts**
-
-```ts
-import { createServer, type Server } from 'node:http';
-import type { ComponentDefinition } from 'cotillion';
-import type pg from 'pg';
-import { handle } from '../handle.ts';
-
-let server: Server;
-
-export const httpServer = {
-  name: 'httpServer',
-  async start({ postgres }: { postgres: pg.Client }) {
-    server = createServer((req, res) => handle(req, res, postgres));
-    await new Promise<void>((resolve, reject) => server.listen(3000).once('listening', resolve).once('error', reject));
-    return server;
-  },
-  async stop() {
-    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
-  },
-} as const satisfies ComponentDefinition;
-```
+The entrypoint lists the components in start order, wires the exit, and starts the system.
 
 **index.ts**
 
@@ -129,11 +84,16 @@ await client.query('select 1');
 console.log('listening', server.address());
 ```
 
-The entrypoint is a list of definitions in order. The components come back from `start()` keyed by name, and each start is given the components which started before it, which is how the HTTP server gets its postgres client: typed as a connected one, because the declared order makes it so.
+Each component lives in its own file, behind the same small shape: a name, a start which returns the component, and a stop.
 
-Wiring can also stay in plain code. A definition is a plain object, so it can expose what its start created through a getter, and another module can import it:
+**components/postgres.ts**
 
 ```ts
+import type { ComponentDefinition } from 'cotillion';
+import pg from 'pg';
+
+let client: pg.Client | undefined;
+
 export const postgres = {
   name: 'postgres',
   get component(): pg.Client {
@@ -152,8 +112,15 @@ export const postgres = {
 } as const satisfies ComponentDefinition;
 ```
 
+**components/http-server.ts**
+
 ```ts
+import { createServer, type Server } from 'node:http';
+import type { ComponentDefinition } from 'cotillion';
+import { handle } from '../handle.ts';
 import { postgres } from './postgres.ts';
+
+let server: Server;
 
 export const httpServer = {
   name: 'httpServer',
@@ -168,7 +135,7 @@ export const httpServer = {
 } as const satisfies ComponentDefinition;
 ```
 
-The getter throws if read before postgres has started, which the order rules out. Mix the two styles freely.
+The components come back from `start()` keyed by name. The HTTP server reaches the postgres client through the `component` getter on the imported definition, which throws if read before postgres has started; the declared order rules that out, since postgres starts first and stops last. A definition is a plain object, so it can carry a getter like that, or anything else its module wants to expose. The alternative is to take the client from the [components](#components) each start is given, `async start({ postgres }: { postgres: pg.Client })`, and skip the import; mix the two styles freely.
 
 ## Defining components
 

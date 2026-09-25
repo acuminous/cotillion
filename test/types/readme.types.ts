@@ -18,6 +18,10 @@ let client: Client | undefined;
 
 export const postgres = {
   name: 'postgres',
+  get component(): Client {
+    if (!client) throw new Error('postgres has not started');
+    return client;
+  },
   async start() {
     client = connectClient();
     await client.connect();
@@ -29,26 +33,21 @@ export const postgres = {
   },
 } as const satisfies ComponentDefinition;
 
-export const withGetter = {
-  name: 'postgresWithGetter',
-  get component(): Client {
-    if (!client) throw new Error('postgres has not started');
-    return client;
-  },
-  async start() {
-    client = connectClient();
-    return client;
-  },
-} as const satisfies ComponentDefinition;
-
 let server: Server;
 
 export const httpServer = {
   name: 'httpServer',
-  async start({ postgres }: { postgres: Client }) {
-    await postgres.query('select 1');
+  async start() {
+    await postgres.component.query('select 1');
     server = listen();
     return server;
+  },
+} as const satisfies ComponentDefinition;
+
+export const injected = {
+  name: 'injected',
+  async start({ postgres }: { postgres: Client }) {
+    return postgres.query('select 1');
   },
 } as const satisfies ComponentDefinition;
 
@@ -70,10 +69,10 @@ async function quickStart() {
   return server.address();
 }
 
-async function getterStyle() {
-  const { postgresWithGetter } = await createSystem([withGetter]).start();
-  const same: Client = withGetter.component;
-  return { postgresWithGetter, same };
+async function injectedStyle() {
+  const { injected: reply } = await createSystem([postgres, injected]).start();
+  const same: Client = postgres.component;
+  return { reply, same };
 }
 
-export { quickStart, getterStyle };
+export { quickStart, injectedStyle };
