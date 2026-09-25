@@ -1,14 +1,27 @@
 const { ComponentEvent, SystemEvent } = require('../../lib');
 const { toStepDataRows } = require('./step-data-table');
 
+const documented = new Set([...Object.values(ComponentEvent), ...Object.values(SystemEvent)]);
+const announced = new Set();
+
 function createEventRecorder() {
   const recorded = [];
   const awaiting = [];
 
   function record(system) {
+    refuseUndocumentedEvents(system);
     listenFor(system, ComponentEvent, componentColumns);
     listenFor(system, SystemEvent, systemColumns);
     return system;
+  }
+
+  function refuseUndocumentedEvents(system) {
+    const emit = system.emit.bind(system);
+    system.emit = (event, ...args) => {
+      if (!documented.has(event)) throw new Error(`The system announced an undocumented event: ${String(event)}`);
+      announced.add(event);
+      return emit(event, ...args);
+    };
   }
 
   function next(event) {
@@ -71,4 +84,12 @@ function systemColumns(event, error) {
   return { event, payload: error && 'error' };
 }
 
-module.exports = { createEventRecorder };
+function announcedEvents() {
+  return announced;
+}
+
+function documentedEvents() {
+  return documented;
+}
+
+module.exports = { createEventRecorder, announcedEvents, documentedEvents };

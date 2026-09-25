@@ -1,7 +1,12 @@
 const path = require('node:path');
 const Yadda = require('yadda');
+const { after } = require('node:test');
+const { deepEqual: deq } = require('node:assert/strict');
 const creatingASystemLibrary = require('./steps/creating-a-system-library');
+const quickStartLibrary = require('./steps/quick-start-library');
+const readmeLibrary = require('./steps/readme-library');
 const systemLibrary = require('./steps/system-library');
+const { announcedEvents, documentedEvents } = require('./lib/event-recorder');
 
 const {
   FileSearch,
@@ -16,10 +21,18 @@ const { featureFile, scenarios, rules, steps } = nodetest.StepLevelPlugin.init({
 
 new FileSearch([path.join(__dirname, 'features')], /\.md$/).each((file) => {
   featureFile(file, (feature) => {
-    const yadda = createInstance([creatingASystemLibrary, systemLibrary]);
+    const yadda = createInstance([creatingASystemLibrary, systemLibrary, readmeLibrary, quickStartLibrary]);
     runScenarios(yadda, feature.scenarios);
     rules(feature.rules, (rule) => runScenarios(yadda, rule.scenarios));
   });
+});
+
+after(() => {
+  deq(
+    [...announcedEvents()].sort(),
+    [...documentedEvents()].sort(),
+    'an exported event was never announced by any scenario',
+  );
 });
 
 function runScenarios(yadda, scenarioList) {

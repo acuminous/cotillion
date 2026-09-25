@@ -40,6 +40,29 @@ yet reached are skipped, and the stop rejects with the same error.
 - When postgres has stopped
 - Then the system has stopped
 
+## Rule: A single timeout bounds both operations
+
+### Scenario: A start which exceeds the system's timeout
+
+- Given the components postgres
+- And the system has a timeout of 10ms
+- And each component starts
+- And each component stops
+- And postgres hangs while starting
+- When the system starts
+- Then the start is rejected with a TimeoutError "The start timed out after 10ms waiting for postgres to start"
+
+### Scenario: A stop which exceeds the system's timeout
+
+- Given the components postgres
+- And the system has a timeout of 10ms
+- And each component starts
+- And each component stops
+- And postgres hangs while stopping
+- When the system is started
+- And the system stops
+- Then the stop is rejected with a TimeoutError "The stop timed out after 10ms waiting for postgres to stop"
+
 ## Rule: The start timeout stops the system
 
 ### Scenario: An abortable component which honours the abort

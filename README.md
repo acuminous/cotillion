@@ -2,7 +2,7 @@
 
 Graceful orchestration of network components.
 
-![An engraving of an 18th century cotillion: four couples dancing a figure while musicians play from a gallery](assets/the-cotillion-dance.jpg)
+![An engraving of an 18th century cotillion: four couples dancing a figure while musicians play from a gallery](https://raw.githubusercontent.com/acuminous/cotillion/main/assets/the-cotillion-dance.jpg)
 
 *The Cotillion Dance, engraved by James Caldwall after John Collet, 1771. [Yale Center for British Art, CC0](https://commons.wikimedia.org/wiki/File:James_Caldwall_-_The_Cotillion_Dance_-_B1977.14.11242_-_Yale_Center_for_British_Art.jpg).*
 

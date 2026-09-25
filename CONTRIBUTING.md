@@ -100,6 +100,10 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
 The harness is small but four of its properties were found by reading yadda's source rather
 than its README, and each one fails quietly when forgotten.
 
+- **The recorder refuses undocumented events.** It wraps the system's emit, so an event outside
+  the exported names fails the scenario which announced it, and the harness asserts after the
+  suite that every exported name was announced by some scenario. The README conformance feature
+  closes the loop by asserting the exported names against the README's tables, both ways.
 - **Markdown features need their own file search.** yadda's FeatureFileSearch matches only
   .feature, .spec and .specification, so test/features.test.js uses FileSearch with an
   explicit /\.md$/ pattern and a MarkdownFeatureFileParser. A feature added under another
