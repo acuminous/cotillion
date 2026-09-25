@@ -25,16 +25,37 @@ export type SystemEventName = `${SystemEvent}`;
 
 export type SkipReason = 'timeout' | 'abort' | 'failure' | 'missing' | 'started' | 'stopped';
 
-export interface ComponentEventPayload {
-  name: string;
-  error?: Error;
-  reason?: SkipReason;
+export type InterruptionReason = 'timeout' | 'abort';
+
+export interface ComponentEventPayloads {
+  component_start_initiated: { name: string };
+  component_start_succeeded: { name: string };
+  component_start_failed: { name: string; error: Error };
+  component_start_skipped: { name: string; reason: SkipReason };
+  component_start_aborted: { name: string; reason: InterruptionReason };
+  component_stop_initiated: { name: string };
+  component_stop_succeeded: { name: string };
+  component_stop_failed: { name: string; error: Error };
+  component_stop_skipped: { name: string; reason: SkipReason };
 }
+
+export interface SystemEventArguments {
+  system_start_initiated: [];
+  system_start_succeeded: [];
+  system_start_failed: [error: Error];
+  system_stop_initiated: [];
+  system_stop_succeeded: [];
+  system_stop_failed: [error: Error];
+}
+
+export type ComponentEventPayload = ComponentEventPayloads[ComponentEventName];
 
 export interface Timeouts {
   start?: number;
   stop?: number;
 }
+
+export type Components = { [name: string]: unknown };
 
 export interface ComponentDefinition {
   name: string;
@@ -44,20 +65,33 @@ export interface ComponentDefinition {
   timeout?: number | Timeouts;
 }
 
+export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
+
 export interface SystemOptions {
   timeout?: number | Timeouts;
 }
 
-export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
+type LeavesOf<D> = D extends readonly (infer E)[] ? (E extends readonly unknown[] ? LeavesOf<E> : E) : never;
 
-export type Components = { [name: string]: unknown };
+type NameOf<L> = L extends { name: infer N extends string } ? N : never;
 
-export interface System {
-  on(event: ComponentEventName, listener: (payload: ComponentEventPayload) => void): this;
-  on(event: SystemEventName, listener: (error?: Error) => void): this;
-  start(): Promise<Components>;
+// biome-ignore lint/suspicious/noConfusingVoidType: a start which returns nothing resolves to void, and the README promises undefined
+type Produced<R> = [Awaited<R>] extends [void] ? undefined : Awaited<R>;
+
+type ComponentOf<L> = L extends { start(...args: never[]): infer R } ? Produced<R> : undefined;
+
+export type ComponentsOf<D> = { [L in LeavesOf<D> as NameOf<L>]: ComponentOf<L> };
+
+export interface System<C = Components> {
+  on<E extends ComponentEventName>(event: E, listener: (payload: ComponentEventPayloads[E]) => void): this;
+  on<E extends SystemEventName>(event: E, listener: (...args: SystemEventArguments[E]) => void): this;
+  once<E extends ComponentEventName>(event: E, listener: (payload: ComponentEventPayloads[E]) => void): this;
+  once<E extends SystemEventName>(event: E, listener: (...args: SystemEventArguments[E]) => void): this;
+  off<E extends ComponentEventName>(event: E, listener: (payload: ComponentEventPayloads[E]) => void): this;
+  off<E extends SystemEventName>(event: E, listener: (...args: SystemEventArguments[E]) => void): this;
+  start(): Promise<C>;
   stop(): Promise<void>;
-  restart(): Promise<Components>;
+  restart(): Promise<C>;
   stopOn(...events: string[]): () => void;
 }
 
@@ -69,4 +103,7 @@ export class AbortError extends Error {
   readonly name: 'AbortError';
 }
 
-export function createSystem(definition: SystemDefinition, options?: SystemOptions): System;
+export function createSystem<const D extends SystemDefinition>(
+  definition: D,
+  options?: SystemOptions,
+): System<NoInfer<ComponentsOf<D>>>;
