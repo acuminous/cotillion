@@ -19,6 +19,8 @@ const unbind: () => void = system.stopOn('SIGTERM', 'SIGINT');
 const unbindExit: () => void = system.exitOn('SIGTERM', 'SIGINT');
 
 const bounded: System = createSystem([], { timeouts: 30000 });
+const named: System = createSystem([], { name: 'orders', timeouts: 30000 });
+const systemName: string | undefined = named.name;
 const boundedSeparately: System = createSystem([], { timeouts: { start: 30000, stop: 10000 } });
 const abortable: System = createSystem([
   { name: 'postgres', abortable: true, async start(components: Components, signal: AbortSignal) {} },
@@ -94,6 +96,9 @@ const timeoutWhichIsNotANumber: System = createSystem([{ name: 'postgres', timeo
 
 // @ts-expect-error start is a function, not a description
 const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start: 'soon' }]);
+
+// @ts-expect-error a system's name is a string
+const nameWhichIsNotAString: System = createSystem([], { name: 42 });
 
 // @ts-expect-error a system timeout is a number of milliseconds, not a description
 const systemTimeoutWhichIsNotANumber: System = createSystem([], { timeouts: 'soon' });

@@ -156,7 +156,7 @@ The definition may have other properties too, such as the `component` getter in 
 
 ## Starting and stopping
 
-`createSystem(definition, options)` validates the definition and rejects a malformed one at construction, before anything starts.
+`createSystem(definition, options)` validates the definition and rejects a malformed one at construction, before anything starts. The options may carry a `name` for the system, available afterwards as `system.name`, and its [timeouts](#system-timeouts).
 
 `start()` starts the components in order and resolves to them, keyed by name. If a component fails to start, cotillion stops the ones which had started, then `start()` rejects with the component's error.
 

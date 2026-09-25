@@ -46,6 +46,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('the system has an? $key timeout of $value', ({ world }, key, value) => {
     optionsOf(world).timeouts = { ...optionsOf(world).timeouts, [key]: value };
   })
+  .given('the system has a name of $value', ({ world }, value) => {
+    optionsOf(world).name = value;
+  })
   .given('the system has an option called $key', ({ world }, key) => {
     optionsOf(world)[key] = 1000;
   })
@@ -53,7 +56,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     definitionNamed(world.definition, name).timeouts = { [key]: value };
   })
   .when('the system is created', ({ world }) => {
-    world.error = errorFrom(() => createSystem(world.definition, world.options));
+    world.error = errorFrom(() => {
+      world.system = createSystem(world.definition, world.options);
+    });
   })
   .when('the system is asked to stop on no process events', ({ world }) => {
     world.error = errorFrom(() => createSystem(world.definition).stopOn());
@@ -67,6 +72,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .then('the system is accepted', ({ world }) => {
     eq(world.error, undefined);
+  })
+  .then("the system's name is $value", ({ world }, value) => {
+    eq(world.system.name, value);
   })
   .then('the system is rejected with $message', ({ world }, message) => {
     ok(world.error, 'the system was accepted');

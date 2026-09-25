@@ -28,6 +28,14 @@ and the first violation is the one reported.
 - When the system is created
 - Then the system is accepted
 
+### Scenario: A system declaring its name
+
+- Given the components postgres
+- And the system has a name of "orders"
+- When the system is created
+- Then the system is accepted
+- And the system's name is "orders"
+
 ### Scenario: A system declaring its timeouts
 
 - Given the components postgres
@@ -191,6 +199,13 @@ and the first violation is the one reported.
 - And the system has an abort timeout of 1000
 - When the system is created
 - Then the system is rejected with "The system has an unknown timeout key: abort"
+
+### Scenario: A system name which is not a string
+
+- Given the components postgres
+- And the system has a name of 42
+- When the system is created
+- Then the system is rejected with "The system has a name which is not a string"
 
 ### Scenario: An option cotillion does not recognise
 

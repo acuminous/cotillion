@@ -71,6 +71,7 @@ export interface ComponentDefinition {
 export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
 
 export interface SystemOptions {
+  name?: string;
   timeouts?: number | Timeouts;
 }
 
@@ -88,6 +89,7 @@ export type ComponentsOf<D> = { [L in LeavesOf<D> as NameOf<L>]: ComponentOf<L> 
 export type SystemEvents = { [E in ComponentEventName]: [payload: ComponentEventPayloads[E]] } & SystemEventArguments;
 
 export interface System<C = Components> extends EventEmitter<SystemEvents> {
+  readonly name: string | undefined;
   start(): Promise<C>;
   stop(): Promise<void>;
   restart(): Promise<C>;
