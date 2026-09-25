@@ -70,6 +70,10 @@ function httpServerDefinition(postgres) {
   let server;
   return {
     name: 'httpServer',
+    get component() {
+      if (!server) throw new Error('httpServer has not started');
+      return server;
+    },
     async start() {
       server = createServer((req, res) => {
         postgres.component.query('select 1').then((reply) => res.end(reply));

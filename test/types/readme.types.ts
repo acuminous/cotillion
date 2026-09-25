@@ -33,10 +33,14 @@ export const postgres = {
   },
 } as const satisfies ComponentDefinition;
 
-let server: Server;
+let server: Server | undefined;
 
 export const httpServer = {
   name: 'httpServer',
+  get component(): Server {
+    if (!server) throw new Error('httpServer has not started');
+    return server;
+  },
   async start() {
     await postgres.component.query('select 1');
     server = listen();

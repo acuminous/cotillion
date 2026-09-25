@@ -8,15 +8,12 @@
 [![License](https://img.shields.io/npm/l/cotillion)](LICENSE)
 -->
 
-Graceful orchestration of network components (database clients, http servers, etc).
+Cotillion is a module graceful orchestration of network components (database clients, http servers, etc). Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is often forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
 
-Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is usually forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
-
-Cotillion is the lifecycle and nothing else. You hand it a definition: an array of named components with asynchronous start and stop functions, nested where they may run in parallel. It starts them in order and resolves to what they produced, keyed by name; stops them in reverse; bounds each operation, and each component, with timeouts; interrupts a start cleanly when a stop or a termination signal arrives midway; and announces every step as events, for logging and for exit handling. Dependency injection frameworks such as [systemic](https://github.com/onebeyond/systemic) and application frameworks such as [NestJS](https://nestjs.com/) order startup and shutdown as a side effect of wiring, at the price of a container and a registration API, and neither bounds a hook which hangs. If your wiring is plain code, cotillion is all you are missing.
+Cotillion is the lifecycle and nothing else. You hand it a definition: an array of named components with asynchronous start and stop functions, nested where they may run in parallel. It starts them in order and resolves to what they produced, keyed by name; stops them in reverse; bounds each operation, and each component, with timeouts; interrupts a start cleanly when a stop or a termination signal arrives midway; and announces every step as events, for logging and for exit handling.
 
 ## Contents
 
-- [How it works](#how-it-works)
 - [Installation](#installation)
 - [Quick start](#quick-start)
 - [Defining components](#defining-components)
@@ -30,17 +27,6 @@ Cotillion is the lifecycle and nothing else. You hand it a definition: an array 
 - [Errors](#errors)
 - [License](#license)
 - [The name](#the-name)
-
-## How it works
-
-You define components, list them in start order, and create a system.
-
-1. A component definition has a unique name and asynchronous start and stop functions.
-2. The array is the order. A nested array is a group whose entries run in parallel.
-3. Starting runs the start functions in order and resolves to the components they produced, keyed by name. Each start is given the components which started before it.
-4. Stopping runs the stop functions in reverse.
-5. Both are bounded by the system's timeouts. Stopping mid-start interrupts the start: abortable components are signalled, the rest are waited for, and the unreached are skipped.
-6. The system is an EventEmitter, announcing every component and every operation.
 
 ## Installation
 
@@ -120,22 +106,27 @@ import type { ComponentDefinition } from 'cotillion';
 import { handle } from '../handle.ts';
 import { postgres } from './postgres.ts';
 
-let server: Server;
+let server: Server | undefined;
 
 export const httpServer = {
   name: 'httpServer',
+  get component(): Server {
+    if (!server) throw new Error('httpServer has not started');
+    return server;
+  },
   async start() {
     server = createServer((req, res) => handle(req, res, postgres.component));
     await new Promise<void>((resolve, reject) => server.listen(3000).once('listening', resolve).once('error', reject));
     return server;
   },
   async stop() {
-    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+    await new Promise<void>((resolve, reject) => server?.close((err) => (err ? reject(err) : resolve())));
+    server = undefined;
   },
 } as const satisfies ComponentDefinition;
 ```
 
-The components come back from `start()` keyed by name. The HTTP server reaches the postgres client through the `component` getter on the imported definition, which throws if read before postgres has started; the declared order rules that out, since postgres starts first and stops last. A definition is a plain object, so it can carry a getter like that, or anything else its module wants to expose. The alternative is to take the client from the [components](#components) each start is given, `async start({ postgres }: { postgres: pg.Client })`, and skip the import; mix the two styles freely.
+The components come back from `start()` keyed by name. Each definition also exposes what its start created through a `component` getter, which is how the HTTP server reaches the postgres client: the getter throws if read before the component has started, and the declared order rules that out, since postgres starts first and stops last. A definition is a plain object, so it can carry a getter like that, or anything else its module wants to expose. The alternative is to take the client from the [components](#components) each start is given, `async start({ postgres }: { postgres: pg.Client })`, and skip the import; mix the two styles freely.
 
 ## Defining components
 
