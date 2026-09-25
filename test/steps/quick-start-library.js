@@ -12,7 +12,7 @@ module.exports = English.localise(new ContextParamLibrary(new Dictionary()))
   .given("the quick start's components", ({ world }) => {
     world.database = createDatabase();
     world.definition = [postgresDefinition(world.database), httpServerDefinition()];
-    world.options = { timeout: { start: 30000, stop: 10000 } };
+    world.options = { timeouts: { start: 30000, stop: 10000 } };
   })
   .then("the HTTP server answers a request with the database's reply", async ({ world }) => {
     const { httpServer } = await world.starts.at(-1).promise;

@@ -106,20 +106,20 @@ export const httpServer = {
 **index.ts**
 
 ```ts
-import { createSystem } from 'cotillion';
+import { ComponentEvent, SystemEvent, createSystem } from 'cotillion';
 import { postgres } from './components/postgres.ts';
 import { httpServer } from './components/http-server.ts';
 
-const system = createSystem([postgres, httpServer], { timeout: { start: 30000, stop: 10000 } });
+const system = createSystem([postgres, httpServer], { timeouts: { start: 30000, stop: 10000 } });
 
-system.on('component_start_succeeded', ({ name }) => console.log(`${name} started`));
-system.on('component_stop_succeeded', ({ name }) => console.log(`${name} stopped`));
-system.on('component_start_failed', ({ name, error }) => console.error(`${name} failed to start`, error));
-system.on('component_stop_failed', ({ name, error }) => console.error(`${name} failed to stop`, error));
+system.on(ComponentEvent.StartSucceeded, ({ name }) => console.log(`${name} started`));
+system.on(ComponentEvent.StopSucceeded, ({ name }) => console.log(`${name} stopped`));
+system.on(ComponentEvent.StartFailed, ({ name, error }) => console.error(`${name} failed to start`, error));
+system.on(ComponentEvent.StopFailed, ({ name, error }) => console.error(`${name} failed to stop`, error));
 
-system.on('system_start_failed', () => { process.exitCode = 1; });
-system.on('system_stop_succeeded', () => process.exit());
-system.on('system_stop_failed', () => process.exit(1));
+system.on(SystemEvent.StartFailed, () => { process.exitCode = 1; });
+system.on(SystemEvent.StopSucceeded, () => process.exit());
+system.on(SystemEvent.StopFailed, () => process.exit(1));
 
 system.stopOn('SIGTERM', 'SIGINT');
 
@@ -261,13 +261,11 @@ Every component receives exactly one of its events per operation, whether or not
 
 The failed events receive the operation's error, the same one its promise rejects with. The others carry nothing.
 
-The names are also exported as `ComponentEvent` and `SystemEvent`, so you can reach them through your editor; the two forms are interchangeable:
+The constants `ComponentEvent` and `SystemEvent` carry the names in the two tables, and the string names work just as well; the two forms are interchangeable:
 
 ```ts
-import { ComponentEvent, SystemEvent } from 'cotillion';
-
-system.on(ComponentEvent.StartFailed, ({ name, error }) => logger.error(`${name} failed to start`, error));
-system.on(SystemEvent.StopSucceeded, () => process.exit());
+system.on('component_start_failed', ({ name, error }) => logger.error(`${name} failed to start`, error));
+system.on('system_stop_succeeded', () => process.exit());
 ```
 
 The aborted event announces a component whose start was interrupted and which honoured its signal; one which completes regardless is announced as succeeded, because it is up and will be stopped. No event is named `error`, so no listener is ever mandatory.
@@ -277,7 +275,7 @@ The aborted event announces a component whose start was interrupted and which ho
 A system may be given a start timeout and a stop timeout, in milliseconds:
 
 ```ts
-const system = createSystem(definition, { timeout: { start: 30000, stop: 10000 } });
+const system = createSystem(definition, { timeouts: { start: 30000, stop: 10000 } });
 ```
 
 A number bounds both operations; the object form bounds them separately, and either may be omitted, in which case cotillion waits as long as the components take.
@@ -327,9 +325,9 @@ The events are explicit; any process event will do. The first to arrive stops th
 Cotillion never calls `process.exit`. The stop's outcome arrives as a [system event](#system-events), so exiting stays in your hands:
 
 ```ts
-system.on('system_start_failed', () => { process.exitCode = 1; });
-system.on('system_stop_succeeded', () => process.exit());
-system.on('system_stop_failed', () => process.exit(1));
+system.on(SystemEvent.StartFailed, () => { process.exitCode = 1; });
+system.on(SystemEvent.StopSucceeded, () => process.exit());
+system.on(SystemEvent.StopFailed, () => process.exit(1));
 ```
 
 The first line matters: a failed start stops the system, and that stop usually succeeds, so a listener which exited 0 on every successful stop would report a deploy whose database never connected as a success.

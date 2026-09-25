@@ -195,6 +195,6 @@ and the first violation is the one reported.
 ### Scenario: An option cotillion does not recognise
 
 - Given the components postgres
-- And the system has an option called timeouts
+- And the system has an option called timeout
 - When the system is created
-- Then the system is rejected with "The system has an unknown option: timeouts"
+- Then the system is rejected with "The system has an unknown option: timeout"

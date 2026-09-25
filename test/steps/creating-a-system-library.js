@@ -41,10 +41,10 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     definitionNamed(world.definition, name).abortable = value;
   })
   .given('the system has a timeout of $value', ({ world }, value) => {
-    optionsOf(world).timeout = value;
+    optionsOf(world).timeouts = value;
   })
   .given('the system has an? $key timeout of $value', ({ world }, key, value) => {
-    optionsOf(world).timeout = { ...optionsOf(world).timeout, [key]: value };
+    optionsOf(world).timeouts = { ...optionsOf(world).timeouts, [key]: value };
   })
   .given('the system has an option called $key', ({ world }, key) => {
     optionsOf(world)[key] = 1000;

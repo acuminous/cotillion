@@ -1,5 +1,5 @@
 import type { ComponentDefinition } from '../../lib/index';
-import { createSystem } from '../../lib/index';
+import { ComponentEvent, SystemEvent, createSystem } from '../../lib/index';
 
 interface Client {
   connect(): Promise<void>;
@@ -53,14 +53,14 @@ export const httpServer = {
 } as const satisfies ComponentDefinition;
 
 async function quickStart() {
-  const system = createSystem([postgres, httpServer], { timeout: { start: 30000, stop: 10000 } });
+  const system = createSystem([postgres, httpServer], { timeouts: { start: 30000, stop: 10000 } });
 
-  system.on('component_start_succeeded', ({ name }) => name);
-  system.on('component_start_failed', ({ name, error }) => `${name} ${error.message}`);
-  system.on('system_start_failed', () => {
+  system.on(ComponentEvent.StartSucceeded, ({ name }) => name);
+  system.on(ComponentEvent.StartFailed, ({ name, error }) => `${name} ${error.message}`);
+  system.on(SystemEvent.StartFailed, () => {
     process.exitCode = 1;
   });
-  system.on('system_stop_succeeded', () => process.exit());
+  system.on(SystemEvent.StopSucceeded, () => process.exit());
 
   system.stopOn('SIGTERM', 'SIGINT');
 

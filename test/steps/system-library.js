@@ -71,13 +71,13 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     world.definition = [];
   })
   .given('the system has a timeout of $timeout', ({ world }, timeout) => {
-    optionsOf(world).timeout = timeout;
+    optionsOf(world).timeouts = timeout;
   })
   .given('the system has a start timeout of $timeout', ({ world }, timeout) => {
-    optionsOf(world).timeout = { ...optionsOf(world).timeout, start: timeout };
+    optionsOf(world).timeouts = { ...optionsOf(world).timeouts, start: timeout };
   })
   .given('the system has a stop timeout of $timeout', ({ world }, timeout) => {
-    optionsOf(world).timeout = { ...optionsOf(world).timeout, stop: timeout };
+    optionsOf(world).timeouts = { ...optionsOf(world).timeouts, stop: timeout };
   })
   .given('$component starts with $value', ({ world }, name, value) => {
     componentRecorderOf(world).startsWith(definitionNamed(world.definition, name), value);

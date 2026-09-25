@@ -17,8 +17,8 @@ const stopped: Promise<void> = system.stop();
 const restarted: Promise<Components> = system.restart();
 const unbind: () => void = system.stopOn('SIGTERM', 'SIGINT');
 
-const bounded: System = createSystem([], { timeout: 30000 });
-const boundedSeparately: System = createSystem([], { timeout: { start: 30000, stop: 10000 } });
+const bounded: System = createSystem([], { timeouts: 30000 });
+const boundedSeparately: System = createSystem([], { timeouts: { start: 30000, stop: 10000 } });
 const abortable: System = createSystem([
   { name: 'postgres', abortable: true, async start(components: Components, signal: AbortSignal) {} },
 ]);
@@ -95,10 +95,10 @@ const timeoutWhichIsNotANumber: System = createSystem([{ name: 'postgres', timeo
 const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start: 'soon' }]);
 
 // @ts-expect-error a system timeout is a number of milliseconds, not a description
-const systemTimeoutWhichIsNotANumber: System = createSystem([], { timeout: 'soon' });
+const systemTimeoutWhichIsNotANumber: System = createSystem([], { timeouts: 'soon' });
 
 // @ts-expect-error the timeouts are start and stop; nothing is aborted on a timer
-const systemAbortTimeout: System = createSystem([], { timeout: { abort: 1000 } });
+const systemAbortTimeout: System = createSystem([], { timeouts: { abort: 1000 } });
 
 // @ts-expect-error a stop is never interrupted, so it is given nothing
 const stopExpectingASignal: System = createSystem([{ name: 'postgres', async stop(signal: AbortSignal) {} }]);

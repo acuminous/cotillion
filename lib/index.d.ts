@@ -71,7 +71,7 @@ export interface ComponentDefinition {
 export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
 
 export interface SystemOptions {
-  timeout?: number | Timeouts;
+  timeouts?: number | Timeouts;
 }
 
 type LeavesOf<D> = D extends readonly (infer E)[] ? (E extends readonly unknown[] ? LeavesOf<E> : E) : never;
