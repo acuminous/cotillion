@@ -2,7 +2,7 @@
   "name": "cotillion-example-web-app",
   "version": "0.0.0",
   "private": true,
-  "description": "A skeleton service on cotillion: postgres, redis and a Hono HTTP server, started in order and stopped in reverse",
+  "description": "A web app on cotillion: postgres, redis and a Hono HTTP server, started in order and stopped in reverse",
   "type": "module",
   "engines": {
     "node": ">=22"
