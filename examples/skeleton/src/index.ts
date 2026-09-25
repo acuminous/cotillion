@@ -1,9 +1,10 @@
 import { ComponentEvent, createSystem } from 'cotillion';
+import { app } from './components/app.ts';
 import { httpServer } from './components/http-server.ts';
 import { postgres } from './components/postgres.ts';
 import { redis } from './components/redis.ts';
 
-const system = createSystem([[postgres, redis], httpServer], { timeouts: { start: 30000, stop: 10000 } });
+const system = createSystem([[postgres, redis], app, httpServer], { timeouts: { start: 30000, stop: 10000 } });
 
 system.on(ComponentEvent.StartSucceeded, ({ name }) => console.log(`${name} started`));
 system.on(ComponentEvent.StopSucceeded, ({ name }) => console.log(`${name} stopped`));

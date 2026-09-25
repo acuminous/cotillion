@@ -1,6 +1,6 @@
 import { type ServerType, serve } from '@hono/node-server';
 import type { ComponentDefinition } from 'cotillion';
-import { app } from '../app.ts';
+import type { Hono } from 'hono';
 
 let server: ServerType | undefined;
 
@@ -10,7 +10,7 @@ export const httpServer = {
     if (!server) throw new Error('httpServer has not started');
     return server;
   },
-  async start() {
+  async start({ app }: { app: Hono }) {
     const port = Number(process.env.PORT ?? 3000);
     server = await new Promise<ServerType>((resolve) => {
       const listening = serve({ fetch: app.fetch, port }, () => resolve(listening));
