@@ -10,10 +10,10 @@ const system = createSystem([[postgres, redis], app, httpServer], {
 });
 
 system.on(SystemEvent.StartInitiated, ({ name }) => console.log(`${name} system is starting`));
-system.on(SystemEvent.StartSuceeded, ({ name }) => console.log(`${name} system started`));
+system.on(SystemEvent.StartSucceeded, ({ name }) => console.log(`${name} system started`));
 system.on(SystemEvent.StartFailed, ({ name, error }) => console.log(`${name} system failed to start`, error));
 system.on(SystemEvent.StopInitiated, ({ name }) => console.log(`${name} system is stopping`));
-system.on(SystemEvent.StopSuceeded, ({ name }) => console.log(`${name} system stopped`));
+system.on(SystemEvent.StartSucceeded, ({ name }) => console.log(`${name} system stopped`));
 system.on(SystemEvent.StopFailed, ({ name, error }) => console.log(`${name} system failed to stop`, error));
 
 system.on(ComponentEvent.StartSucceeded, ({ name }) => console.log(`${name} component started`));

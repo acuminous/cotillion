@@ -30,7 +30,9 @@
     "yadda": "^3.2.0"
   },
   "files": [
-    "lib"
+    "lib",
+    "test",
+    "examples"
   ],
   "keywords": [
     "lifecycle",

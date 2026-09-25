@@ -35,6 +35,9 @@ commit.
 
 The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadda/blob/master/CONTRIBUTORS.md):
 
+- **The package ships lib/, test/ and examples/.** The feature tests and the example are part
+  of what a user, or an agent working on their behalf, can read to learn the behaviour, so they
+  are published with the code; node_modules and lockfiles are excluded by npm itself.
 - **Plain CommonJS in lib/**, no build step. TypeScript exists only in the hand-written
   lib/index.d.ts, test/types/ and documentation examples.
 - **The d.ts is a first-class deliverable.** No any, no as-casts. Its types are structural and
