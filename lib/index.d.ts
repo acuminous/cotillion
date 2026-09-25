@@ -1,3 +1,5 @@
+import type { EventEmitter } from 'node:events';
+
 export enum ComponentEvent {
   StartInitiated = 'component_start_initiated',
   StartSucceeded = 'component_start_succeeded',
@@ -63,6 +65,7 @@ export interface ComponentDefinition {
   start?(components: Components, signal: AbortSignal): unknown;
   stop?(): unknown;
   timeout?: number | Timeouts;
+  [extra: string]: unknown;
 }
 
 export type SystemDefinition = readonly (ComponentDefinition | SystemDefinition)[];
@@ -82,13 +85,9 @@ type ComponentOf<L> = L extends { start(...args: never[]): infer R } ? Produced<
 
 export type ComponentsOf<D> = { [L in LeavesOf<D> as NameOf<L>]: ComponentOf<L> };
 
-export interface System<C = Components> {
-  on<E extends ComponentEventName>(event: E, listener: (payload: ComponentEventPayloads[E]) => void): this;
-  on<E extends SystemEventName>(event: E, listener: (...args: SystemEventArguments[E]) => void): this;
-  once<E extends ComponentEventName>(event: E, listener: (payload: ComponentEventPayloads[E]) => void): this;
-  once<E extends SystemEventName>(event: E, listener: (...args: SystemEventArguments[E]) => void): this;
-  off<E extends ComponentEventName>(event: E, listener: (payload: ComponentEventPayloads[E]) => void): this;
-  off<E extends SystemEventName>(event: E, listener: (...args: SystemEventArguments[E]) => void): this;
+export type SystemEvents = { [E in ComponentEventName]: [payload: ComponentEventPayloads[E]] } & SystemEventArguments;
+
+export interface System<C = Components> extends EventEmitter<SystemEvents> {
   start(): Promise<C>;
   stop(): Promise<void>;
   restart(): Promise<C>;

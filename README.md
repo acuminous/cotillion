@@ -67,6 +67,7 @@ Each component lives in its own file, behind the same small shape.
 **components/postgres.ts**
 
 ```ts
+import type { ComponentDefinition } from 'cotillion';
 import pg from 'pg';
 
 let client: pg.Client | undefined;
@@ -82,13 +83,14 @@ export const postgres = {
     await client?.end();
     client = undefined;
   },
-};
+} as const satisfies ComponentDefinition;
 ```
 
 **components/http-server.ts**
 
 ```ts
 import { createServer, type Server } from 'node:http';
+import type { ComponentDefinition } from 'cotillion';
 import type pg from 'pg';
 import { handle } from '../handle.ts';
 
@@ -104,7 +106,7 @@ export const httpServer = {
   async stop() {
     await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   },
-};
+} as const satisfies ComponentDefinition;
 ```
 
 **index.ts**
@@ -153,7 +155,7 @@ export const postgres = {
     await client?.end();
     client = undefined;
   },
-};
+} as const satisfies ComponentDefinition;
 ```
 
 ```ts
@@ -169,7 +171,7 @@ export const httpServer = {
   async stop() {
     await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   },
-};
+} as const satisfies ComponentDefinition;
 ```
 
 The getter throws if read before postgres has started, which the declared order rules out. Both styles give the same system; choose per component, and mix them freely.
@@ -226,13 +228,13 @@ await postgres.query('select 1');
 
 Every name appears in the object; a definition with no start function, or whose start returned nothing, appears with the value `undefined`. The object is unordered by intent: sequencing is the definition's job, and the object exists so the caller can reach what starting created, such as a connected database client. It is also why names must be unique, which is validated when the system is created. Any string is a valid name; one which is also a valid identifier destructures as above, and the rest are reachable by index access.
 
-In TypeScript the object is typed: each property has whatever type its start function resolved to, inferred from the definition passed to `createSystem`, so the destructured `postgres` above is a `pg.Client` without a cast.
+In TypeScript the object is typed: each property has whatever type its start function resolved to, inferred from the definition passed to `createSystem`, so the destructured `postgres` above is a `pg.Client` without a cast. The inference keys on each definition's `name`, which TypeScript keeps as a literal for a definition written inline in the `createSystem` call, and for one declared in its own module with `as const satisfies ComponentDefinition`, as the quick start does. A definition exported as a bare object literal, with or without `satisfies` alone, has its name widened to `string`, and the object loses its property names with it. The `satisfies` half checks the definition's shape where it is written, unknown timeout keys included, and leaves room for whatever else the module exposes on it, such as a getter.
 
 The same object, as it stood when a start began, is the first argument that start receives: a frozen snapshot of the components which had started before it, with every earlier name present, and `undefined` for a definition with no start function or whose start returned nothing. A component never sees one which started after it, and the entries of a [parallel group](#parallel-groups) receive the snapshot taken before the group began, so siblings do not see each other. This is the whole of cotillion's dependency injection: no container, no registration, and no mapping layer, so a component which wants another reaches it by the name its definition gave it, exactly as the caller of `start()` does.
 
 ## Events
 
-A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemitter). Component events announce each component's progress; system events announce each operation as a whole. The names follow one pattern, so they are guessable: the scope (`component_` or `system_`), the operation (`start` or `stop`), then what happened. Events are notifications for logging, diagnostics and exit handling: they do not alter the promise contract, and listening to none of them is fine.
+A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemitter), typed with its events: a listener's payload is typed by the event name it is registered for, in TypeScript. Component events announce each component's progress; system events announce each operation as a whole. The names follow one pattern, so they are guessable: the scope (`component_` or `system_`), the operation (`start` or `stop`), then what happened. Events are notifications for logging, diagnostics and exit handling: they do not alter the promise contract, and listening to none of them is fine.
 
 ### Component events
 

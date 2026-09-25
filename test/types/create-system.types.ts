@@ -41,6 +41,11 @@ system.on('system_stop_failed', (error) => error.message);
 system.on('component_start_skipped', ({ name, reason }) => `${name} ${reason}`);
 system.once('component_start_initiated', ({ name }) => name);
 system.off('component_stop_failed', ({ name, error }) => `${name} ${error.message}`);
+system.removeListener('system_stop_initiated', () => {});
+system.emit('component_start_initiated', { name: 'postgres' });
+
+// @ts-expect-error a component event is emitted with its payload
+system.emit('component_start_initiated');
 
 // @ts-expect-error a succeeded component event carries no error
 system.on('component_start_succeeded', ({ error }) => error);

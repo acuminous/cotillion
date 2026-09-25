@@ -25,7 +25,7 @@ a test, and the module layout stays as small as that specification allows.
 | lib/validate-options.js    | the eager validation createSystem applies to its options                         |
 | lib/validate-timeout.js    | the timeout shape check the two validations share                                |
 | lib/validate-events.js     | the eager validation stopOn applies to its process events                        |
-| lib/index.d.ts             | the hand-written type definitions, importing nothing                             |
+| lib/index.d.ts             | the hand-written type definitions, importing only Node's EventEmitter type       |
 
 The table grows as the implementation lands; the conventions below are binding from the first
 commit.
@@ -37,9 +37,10 @@ The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadd
 - **Plain CommonJS in lib/**, no build step. TypeScript exists only in the hand-written
   lib/index.d.ts, test/types/ and documentation examples.
 - **The d.ts is a first-class deliverable.** No any, no as-casts. Its types are structural and
-  import nothing, so they survive every module resolution. The typed components object (each
-  property's type inferred from its definition's start function) is part of the public
-  contract and is asserted in test/types/.
+  import only Node's EventEmitter type, which the system is, so they survive every module
+  resolution; npm run typecheck proves it under NodeNext and Bundler. The typed components
+  object (each property's type inferred from its definition's start function) and the typed
+  events are part of the public contract and are asserted in test/types/.
 - **Very small functions**, averaging a few lines. If a comment is coming on, extract a named
   function instead.
 - **Avoid else and switch.** They typically hide a fork in behaviour that is better handled
