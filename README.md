@@ -126,7 +126,7 @@ export const httpServer = {
 } as const satisfies ComponentDefinition;
 ```
 
-The system's `start()` resolves to the components, keyed by name. Other parts of the application can get a reference to a component once it has started in two ways. One is the `component` getter each definition exposes: import the definition and read the getter, as the HTTP server does with postgres. The getter throws if read before the component has started, which the declared order rules out for anything started after it. The other is the object passed to each component's start method, holding the components which started before it: `async start({ postgres }: { postgres: pg.Client })`. Mix the two freely.
+The system's `start()` resolves to the components, keyed by name. Other parts of the application can get a reference to a component once it has started in two ways. The first is the `component` getter each definition exposes: import the definition and read the getter, as the HTTP server does with postgres. The getter throws if read before the component has started, which the declared order rules out for anything started after it. The second is the object passed to each component's start method, holding the components which started before it: `async start({ postgres }: { postgres: pg.Client })`.
 
 ## Defining components
 
@@ -157,17 +157,15 @@ A definition may carry whatever else its module wants to expose, such as the get
 
 ## Starting and stopping
 
-`createSystem(definition, options)` validates the definition eagerly: a missing or duplicate name, a malformed entry or a malformed timeout is rejected at construction.
+`createSystem(definition, options)` validates the definition and rejects a malformed one at construction, before anything starts.
 
-`start()` runs the starts in order and resolves to the [components](#components). If one rejects, the components not yet reached are skipped, `system_start_failed` is announced, the components which started are stopped in reverse under the stop timeout, and only then does `start()` reject with the component's error. The stop announces itself like any other, so an exit listener sees it and the caller has nothing left to clean up.
+`start()` starts the components in order and resolves to them, keyed by name. If a component fails to start, cotillion stops the ones which had started, then `start()` rejects with the component's error.
 
-`stop()` runs the stops in reverse and resolves when the last has finished. If one rejects, the error propagates and the earlier components are left alone; a later `stop()` retries from where it left off. Calling `stop()` during a start interrupts it, see [Stopping during a start](#stopping-during-a-start).
+`stop()` stops the started components in reverse order. If a component fails to stop, `stop()` rejects with its error and the earlier components are left running; calling `stop()` again retries from where it left off.
 
-Both are idempotent. Starting a started system resolves to the existing components; stopping a stopped or never-started one resolves at once; a call which joins an operation in progress is silent. Until a stop has succeeded, `start()` returns the previous start's promise, resolved or rejected as it was: await the stop, or call `restart()`. The one exception is a start during the stop of a never-started system, which begins once that stop has finished.
+`restart()` is a stop followed by a start, resolving to the fresh components.
 
-An operation with nothing to do still announces itself and skips every component, so every `stop()` call announces a stop which succeeded. That is what makes exiting from a `system_stop_succeeded` listener safe.
-
-`restart()` is a stop followed by a start, each under its own timeout, resolving to the fresh components. On a stopped system it simply starts.
+Both operations are idempotent: starting a started system, or stopping a stopped one, does nothing, and a call made while the same operation is in progress joins it. The corner cases, such as stopping while the system is starting, are covered under [Stopping during a start](#stopping-during-a-start) and in the feature tests.
 
 ## Components
 
