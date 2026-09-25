@@ -165,7 +165,7 @@ A definition may carry whatever else its module wants to expose, such as the get
 
 `restart()` is a stop followed by a start, resolving to the fresh components.
 
-Both operations are idempotent: starting a started system, or stopping a stopped one, does nothing, and a call made while the same operation is in progress joins it. The corner cases, such as stopping while the system is starting, are covered under [Stopping during a start](#stopping-during-a-start) and in the feature tests.
+Both operations are idempotent: starting a started system, or stopping a stopped one, does nothing, and a call made while the same operation is in progress joins it. The corner case behaviour, such as stopping while the system is starting, are documented in the [feature tests](https://github.com/acuminous/cotillion/tree/main/test/features).
 
 ## Components
 
@@ -178,7 +178,7 @@ await postgres.query('select 1');
 
 Every name appears; a definition with no start, or whose start returned nothing, appears as `undefined`. Any string is a valid name, and one which is a valid identifier destructures as above.
 
-In TypeScript each property has the type its start function resolved to, inferred from the definition. The inference keys on each definition's `name`, which stays a literal for a definition written inline or declared in its own module with `as const satisfies ComponentDefinition`, as the quick start does; a bare exported literal widens its name to `string` and the object loses its property names. The `satisfies` half also checks the definition's shape where it is written.
+In TypeScript each component has the type its start function resolved to, so the destructured `postgres` above is a `pg.Client` without a cast. For that to work on a definition declared in its own module, end it with `as const satisfies ComponentDefinition`, as the quick start does; a bare exported object literal loses the property names.
 
 The same object, as it stood when a start began, is that start's first argument: a frozen snapshot of the components which started before it. A component never sees one which started after it, and the entries of a [parallel group](#parallel-groups) see what started before the group, not each other. That is the whole of cotillion's dependency injection: no container, no registration, no mapping layer.
 
