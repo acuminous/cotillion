@@ -9,4 +9,4 @@ npm start             # http://localhost:3000/health
 npm run docker:down
 ```
 
-The layout follows the README's quick start: each component in its own file under `src/components`, exposing what its start created through a `component` getter, and `src/index.ts` listing them in order. `npm start` runs the TypeScript directly with Node's type stripping, so it needs Node 22 or later.
+The layout follows the README's quick start: each component in its own file under `src/components`, exposing what its start created through a `component` getter; the Hono app and its routes in `src/app.ts`; and `src/index.ts` listing the components in order. `npm start` runs the TypeScript directly with Node's type stripping, so it needs Node 22 or later.
