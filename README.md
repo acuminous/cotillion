@@ -5,8 +5,9 @@
 [![CI](https://github.com/acuminous/cotillion/actions/workflows/qa.yml/badge.svg)](https://github.com/acuminous/cotillion/actions/workflows/qa.yml)
 [![Coverage](https://codecov.io/gh/acuminous/cotillion/branch/main/graph/badge.svg)](https://codecov.io/gh/acuminous/cotillion)
 [![Node.js](https://img.shields.io/node/v/cotillion)](https://nodejs.org)
-[![License](https://img.shields.io/npm/l/cotillion)](LICENSE)
 -->
+[![License](https://img.shields.io/npm/l/cotillion)](LICENSE)
+
 
 Cotillion is a module for the graceful orchestration of network components (database clients, http servers, etc). Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is often forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
 
@@ -20,9 +21,9 @@ Cotillion does the lifecycle and nothing else. You give it an array of component
 - [Starting and stopping](#starting-and-stopping)
 - [Components](#components)
 - [Events](#events)
-- [Timeouts](#timeouts)
-- [Stopping during a start](#stopping-during-a-start)
-- [Process events](#process-events)
+- [System timeouts](#system-timeouts)
+- [Component timeouts](#component-timeouts)
+- [Signals](#signals)
 - [Parallel groups](#parallel-groups)
 - [Errors](#errors)
 - [License](#license)
@@ -151,7 +152,7 @@ const emailListener = {
 - `name` is required and must be unique. It is the component's key in the components object, and identifies the component in events and error messages.
 - `start` is optional. It is called with two arguments: an object holding the components which have already started, keyed by name, and an [AbortSignal](https://nodejs.org/api/globals.html#class-abortsignal) which fires if cotillion needs the start to give up, because the system is being stopped or a timeout has expired. Whatever it returns is the component. Without a start function the component is `undefined`.
 - `stop` is optional. It is called with no arguments.
-- `abortable` is optional and defaults to false. Set it to true only if the start function watches its AbortSignal and gives up promptly when it fires. See [Stopping during a start](#stopping-during-a-start).
+- `abortable` is optional and defaults to false. Set it to true only if the start function watches its AbortSignal and gives up promptly when it fires. See [Stopping during a start](#signals).
 - `timeouts` is optional. It limits how long this component's own start and stop may take, in milliseconds: a number for both, or an object with `start` and `stop` keys. See [Component timeouts](#component-timeouts).
 
 The definition may have other properties too, such as the `component` getter in the quick start. Pass the array of definitions to `createSystem` as its first argument, and the system's options as its second.
@@ -266,23 +267,9 @@ A number applies to all timeouts; the object form sets them separately. There ar
 
 A component which exceeds its own limit is treated as a failure. Its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", the operation continues as after any failure, and the function is left running. If the component is abortable, the AbortSignal passed to its start function fires as well, so the function can give up.
 
-## Stopping during a start
+## Signals
 
-Calling `stop()` while the system is starting interrupts the start:
-
-- A component whose start is in progress and which is `abortable` has the AbortSignal passed to its start function fired. If it then rejects, it is announced as `component_start_aborted`. If it resolves anyway, it is announced as started and will be stopped.
-- A component whose start is in progress and which is not abortable is waited for.
-- Components not yet reached are skipped.
-
-The components which did start are then stopped in reverse order, as in any stop. Once the stop has finished, `start()` rejects with an `AbortError` naming the components whose start was interrupted. An interrupted start is not a failure, so no `system_start_failed` event is emitted; the stop's events tell the story.
-
-Because `start()` rejects only after the stop has finished, a listener which exits the process on `system_stop_succeeded` has ended the process before the rejection arrives. Only an application which stops a starting system without exiting sees the `AbortError`, at its `await`.
-
-The stop timeout applies to the whole stop, including the wait for an interrupted start. A stop is never itself interrupted, because a stop cut short leaves a component half released.
-
-## Process events
-
-`system.stopOn(...events)` calls `stop()` when the process emits any of the named events:
+`system.stopOn(...signals)` calls `stop()` when the process emits any of the named events:
 
 ```ts
 system.stopOn('SIGTERM', 'SIGINT');
