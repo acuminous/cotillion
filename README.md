@@ -8,9 +8,9 @@
 [![License](https://img.shields.io/npm/l/cotillion)](LICENSE)
 -->
 
-Cotillion is a module graceful orchestration of network components (database clients, http servers, etc). Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is often forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
+Cotillion is a module for the graceful orchestration of network components (database clients, http servers, etc). Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is often forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
 
-Cotillion is the lifecycle and nothing else. You hand it a definition: an array of named components with asynchronous start and stop functions, nested where they may run in parallel. It starts them in order and resolves to what they produced, keyed by name; stops them in reverse; bounds each operation, and each component, with timeouts; interrupts a start cleanly when a stop or a termination signal arrives midway; and announces every step as events, for logging and for exit handling.
+Cotillion does the lifecycle and nothing else. You give it an array of components, each with a name and asynchronous start and stop functions. It starts them in order, stops them in reverse, applies timeouts, handles termination signals, and emits events you can log or exit on. Components which may start together go in a nested array.
 
 ## Contents
 
@@ -130,7 +130,7 @@ The system's `start()` resolves to the components, keyed by name. Other parts of
 
 ## Defining components
 
-A component is whatever your start function produces: a connected client, a subscribed listener, a listening server. You hand cotillion a definition of each one, a plain object:
+A component is whatever your start function produces: a connected client, a subscribed listener, a listening server. You give cotillion a definition of each one, which is a plain object:
 
 ```ts
 import type { Components } from 'cotillion';
@@ -148,12 +148,13 @@ const emailListener = {
 };
 ```
 
-- `name` is required and unique within the system. It keys the [components](#components), identifies the component in [events](#events) and appears in error messages.
-- `start` and `stop` are optional; a missing function is skipped. `start` receives the [components](#components) which started before it and an AbortSignal which only fires if the component is abortable. `stop` receives nothing. Whatever start returns is the component.
-- `abortable` defaults to false. Declare it only if the start observes its signal and settles promptly once it fires; cotillion cannot tell.
-- `timeouts` bounds the component's own start and stop: a number for both, or an object with `start` and `stop` keys. There are no defaults. See [Component timeouts](#component-timeouts).
+- `name` is required and must be unique. It is the component's key in the components object, and identifies the component in events and error messages.
+- `start` is optional. It is called with two arguments: an object holding the components which have already started, keyed by name, and an AbortSignal. Whatever it returns is the component. Without a start function the component is `undefined`.
+- `stop` is optional. It is called with no arguments.
+- `abortable` is optional and defaults to false. Set it to true only if the start function watches its signal and gives up promptly when the signal fires. See [Stopping during a start](#stopping-during-a-start).
+- `timeouts` is optional. It limits how long this component's own start and stop may take, in milliseconds: a number for both, or an object with `start` and `stop` keys. See [Component timeouts](#component-timeouts).
 
-A definition may carry whatever else its module wants to expose, such as the getter above. The array of definitions, groups included, is the first argument to `createSystem`; the optional second carries the system's [timeouts](#timeouts).
+The definition may have other properties too, such as the `component` getter in the quick start. Pass the array of definitions to `createSystem` as its first argument, and the system's options as its second.
 
 ## Starting and stopping
 
@@ -165,26 +166,26 @@ A definition may carry whatever else its module wants to expose, such as the get
 
 `restart()` is a stop followed by a start, resolving to the fresh components.
 
-Both operations are idempotent: starting a started system, or stopping a stopped one, does nothing, and a call made while the same operation is in progress joins it. The corner case behaviour, such as stopping while the system is starting, are documented in the [feature tests](https://github.com/acuminous/cotillion/tree/main/test/features).
+Both operations are idempotent: starting a started system, or stopping a stopped one, does nothing, and a call made while the same operation is in progress joins it. The corner case behaviour, such as stopping while the system is starting, is documented in the [feature tests](https://github.com/acuminous/cotillion/tree/main/test/features).
 
 ## Components
 
-Whatever a start function returns is its component, and `start()` resolves to them all, keyed by name:
+`start()` resolves to an object with one property per component, keyed by the definition's name and holding whatever the start function returned:
 
 ```ts
 const { postgres, httpServer } = await system.start();
 await postgres.query('select 1');
 ```
 
-Every name appears; a definition with no start, or whose start returned nothing, appears as `undefined`. Any string is a valid name, and one which is a valid identifier destructures as above.
+A component whose definition has no start function, or whose start function returned nothing, is `undefined`.
 
 In TypeScript each component has the type its start function resolved to, so the destructured `postgres` above is a `pg.Client` without a cast. For that to work on a definition declared in its own module, end it with `as const satisfies ComponentDefinition`, as the quick start does; a bare exported object literal loses the property names.
 
-The same object, as it stood when a start began, is that start's first argument: a frozen snapshot of the components which started before it. A component never sees one which started after it, and the entries of a [parallel group](#parallel-groups) see what started before the group, not each other. That is the whole of cotillion's dependency injection: no container, no registration, no mapping layer.
+The same object is passed to each start function as its first argument, holding the components which had started by then. It is a frozen copy taken when the start begins, so a component sees only the components which started before it, never those which started after. The components in a [parallel group](#parallel-groups) see what started before the group, not each other.
 
 ## Events
 
-A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemitter), typed with its events. Component events announce each component; system events announce each operation. The names follow one pattern: the scope, the operation, then what happened. Events are notifications for logging, diagnostics and exit handling; they never alter the promise contract, and listening to none is fine.
+A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemitter). It emits a component event each time a component starts, stops, fails or is skipped, and a system event when a start or a stop begins and when it finishes. Use them to log the lifecycle and to exit the process. Nothing depends on your listening to them.
 
 ### Component events
 
@@ -200,9 +201,9 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | component_stop_failed     | A component's stop rejected                                                                                                                                             | name, error  |
 | component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function | name, reason |
 
-Each listener receives one payload object: `name` is the component's, `error` is the component's own error, and `reason` is one of `'timeout'`, `'abort'`, `'failure'`, `'missing'`, `'started'` or `'stopped'`.
+Component event listeners receive a single object. `name` is the component's name. `error` is the error the component's function threw. `reason` says why a component was skipped or aborted: `'timeout'`, `'abort'`, `'failure'` (an earlier component failed), `'missing'` (no function), `'started'` (already started) or `'stopped'` (already stopped).
 
-Every component receives exactly one of its events per operation, whether or not the operation ran it. A stop announces `component_stop_skipped` for the components it will not stop, in stop order, before stopping the rest, so a shutdown trace names every component. `'started'` and `'stopped'` are states, not histories: a system which has stopped announces exactly what one which never started announces.
+Every operation announces every component, including the ones it does not run, so a shutdown trace always names every component.
 
 ### System events
 
@@ -215,34 +216,34 @@ Every component receives exactly one of its events per operation, whether or not
 | system_stop_succeeded  | Every started component stopped                          |         |
 | system_stop_failed     | The stop rejected, whether failed or timed out           | error   |
 
-The failed events receive the operation's error, the same one its promise rejects with. The others carry nothing.
+The two failed events receive the error the operation rejected with. The others have no payload.
 
-The constants `ComponentEvent` and `SystemEvent` carry the names in the two tables, and the string names work just as well; the two forms are interchangeable:
+The event names are exported as the constants `ComponentEvent` and `SystemEvent`, used throughout this README. The string names in the tables work just as well:
 
 ```ts
 system.on('component_start_failed', ({ name, error }) => logger.error(`${name} failed to start`, error));
 system.on('system_stop_succeeded', () => process.exit());
 ```
 
-The aborted event announces a component whose start was interrupted and which honoured its signal; one which completes regardless is announced as succeeded, because it is up and will be stopped. No event is named `error`, so no listener is ever mandatory.
+No event is named `error`, so Node.js never throws for a missing listener.
 
 ## Timeouts
 
-A system may be given a start timeout and a stop timeout, in milliseconds:
+You can limit how long a start and a stop may take, in milliseconds:
 
 ```ts
 const system = createSystem(definition, { timeouts: { start: 30000, stop: 10000 } });
 ```
 
-A number bounds both operations; the object form bounds them separately, and either may be omitted, in which case cotillion waits as long as the components take.
+A number applies the same limit to both. The object form sets them separately, and either may be left out, in which case there is no limit.
 
-The start timeout covers the whole start. When it expires cotillion stops the system, exactly as when a component fails to start: abortable components in flight are signalled, the rest waited for, the unreached skipped, the started stopped, and `start()` rejects with a `TimeoutError` naming the components it was waiting for.
+If the start takes longer than its limit, cotillion stops the components which had started, and `start()` rejects with a `TimeoutError` naming the component it was waiting for. A component which is still starting is aborted if it is abortable, and waited for if it is not.
 
-The stop timeout covers the whole stop, whoever began it, including waiting out a start the stop interrupted. It is the only bound on a shutdown: cotillion never aborts a stop, so without one a stop function which hangs, hangs. When it expires the component in flight is deemed to have timed out, which is a failure: its failed event carries a `TimeoutError` naming it, the unreached are skipped, `stop()` rejects with the same error, and the component's promise runs on unobserved.
+If the stop takes longer than its limit, `stop()` rejects with a `TimeoutError` naming the component it was waiting for. Cotillion never interrupts a stop function; the component is treated as having failed to stop, and its function is left running. This limit is what keeps a shutdown within an orchestrator's grace period, whatever a component does.
 
 ### Component timeouts
 
-A component may also bound its own start and stop:
+A component can also limit its own start and stop:
 
 ```ts
 const emailListener = {
@@ -252,33 +253,35 @@ const emailListener = {
 };
 ```
 
-A number bounds both; the object form bounds them separately. There are no defaults.
+A number applies to both; the object form sets them separately. There are no defaults.
 
-A component exceeding its own timeout has **failed**: its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", the unreached are skipped with reason `failure`, a failed start is followed by the automatic stop, and the invocation runs on unobserved. An abortable component's start signal fires with the same error as its reason; a stop is never interrupted.
-
-Both kinds of timeout apply at once and the sooner wins. Their messages tell them apart: a component's names the component, the system's names the operation and what it was waiting for. A component's own timer keeps running while the system waits out its start, so a component which ignores its signal can still be failed by its own bound.
+A component which exceeds its own limit is treated as if its function had thrown: its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", the operation continues as after any failure, and the function is left running. If the component is abortable, its start signal fires as well. When a component limit and a system limit are both set, whichever expires first applies.
 
 ## Stopping during a start
 
-Calling `stop()` while the system is starting interrupts the start. Each in-flight component which declared itself `abortable` has its signal fired and is waited for: if it rejects it honoured the abort and is announced as `component_start_aborted`; if it resolves regardless it is up, announced as `component_start_succeeded`, and will be stopped. A component which is not abortable is never interrupted; cotillion waits for it to finish or fail. The unreached are skipped, then the stop proceeds through whatever started.
+Calling `stop()` while the system is starting interrupts the start:
 
-An interrupted start is not a failure and announces no outcome of its own. The events tell it in order: `system_stop_initiated` as soon as `stop()` is called, the component events as the start winds down, the stops, then the stop's outcome. The `start()` promise has no components to resolve with, so once the stop has finished it rejects with an `AbortError` naming the components whose start was in flight. The stop's outcome event fires first, so when the stop was a termination signal the exit listener has ended the process before the rejection is delivered, and a top-level `await system.start()` needs no handling; an application which stops a starting system without exiting should expect the `AbortError`. The same error is the reason an abortable component's signal carries.
+- A component whose start is in progress and which is `abortable` has its signal fired. If it then rejects, it is announced as `component_start_aborted`. If it resolves anyway, it is announced as started and will be stopped.
+- A component whose start is in progress and which is not abortable is waited for.
+- Components not yet reached are skipped.
 
-The stop timeout bounds all of this. A component which has not finished when it expires is deemed to have timed out as described under [Timeouts](#timeouts): its `component_start_failed` carries the `TimeoutError`, `stop()` rejects with it, and `start()` still rejects with the `AbortError`.
+The components which did start are then stopped in reverse order, as in any stop. Once the stop has finished, `start()` rejects with an `AbortError` naming the components whose start was interrupted. An interrupted start is not a failure, so no `system_start_failed` event is emitted; the stop's events tell the story.
 
-There is no other way to interrupt an operation, and a stop is never aborted, because a stop cut short leaves a component half released. The motivating case is a termination signal during a deploy, which [process events](#process-events) wire up for you.
+Because `start()` rejects only after the stop has finished, a listener which exits the process on `system_stop_succeeded` has ended the process before the rejection arrives. Only an application which stops a starting system without exiting sees the `AbortError`, at its `await`.
+
+The stop timeout applies to the whole stop, including the wait for an interrupted start. A stop is never itself interrupted, because a stop cut short leaves a component half released.
 
 ## Process events
 
-`system.stopOn(...events)` stops the system when the process emits any of the given events:
+`system.stopOn(...events)` calls `stop()` when the process emits any of the named events:
 
 ```ts
 system.stopOn('SIGTERM', 'SIGINT');
 ```
 
-The events are explicit; any process event will do. The first to arrive stops the system under the stop timeout, and further events while that stop is in progress join it. The listeners stay bound for the life of the process, so an event after a `restart()` stops the restarted system too. `stopOn` returns a function which unbinds them, and rejects a call with no events or a non-string one.
+Use it for the termination signals your platform sends. Further events during the stop do nothing more. The listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system. `stopOn` returns a function which removes the listeners.
 
-Cotillion never calls `process.exit`. The stop's outcome arrives as a [system event](#system-events), so exiting stays in your hands:
+Cotillion never calls `process.exit`. Add listeners to exit when the stop has finished:
 
 ```ts
 system.on(SystemEvent.StartFailed, () => { process.exitCode = 1; });
@@ -286,15 +289,15 @@ system.on(SystemEvent.StopSucceeded, () => process.exit());
 system.on(SystemEvent.StopFailed, () => process.exit(1));
 ```
 
-The first line matters: a failed start stops the system, and that stop usually succeeds, so a listener which exited 0 on every successful stop would report a deploy whose database never connected as a success.
+The first line matters. When a start fails, cotillion stops the system, and that stop usually succeeds; without the first line the process would exit with code 0 after a failed start.
 
-Call `stopOn` before `start()`, as the quick start does, because a signal can arrive mid-start. It then interrupts the start as described under [Stopping during a start](#stopping-during-a-start), and the `start()` a caller is awaiting rejects only once the stop has finished, by which time the exit listener has ended the process. With those listeners wired, `start()` never rejects into your code, for a failed component either, so log a failed start from a listener rather than a catch; a catch is reached only in a process which does not exit from its listeners, and should expect an `AbortError` as well as a component's own error. An event before any operation stops a never-started system and announces `system_stop_succeeded` at once.
+Call `stopOn` before `start()`, so that a signal arriving during startup interrupts it. In that case `start()` rejects with an `AbortError`, but only after the stop has finished, by which time the exit listener has ended the process. With these listeners in place, `start()` never rejects into your code, so log start failures from the event listeners rather than from a catch block.
 
-A stop begun by a process event has no caller, so its outcome is announced only through the system events, never as an unhandled rejection.
+A stop begun by a process event reports its outcome only through the system events. Its failure is never an unhandled rejection.
 
 ## Parallel groups
 
-A nested array is a parallel group: its entries start concurrently, and the group is one step in the enclosing sequence.
+Put components in a nested array to start them at the same time:
 
 ```ts
 const system = createSystem([
@@ -304,9 +307,9 @@ const system = createSystem([
 ]);
 ```
 
-On stop the order reverses around the group: `httpServer`, then the three listeners concurrently, then `postgres`. Each listener's start is given the components which started before the group, here `postgres` alone; `httpServer` is given all four.
+The group counts as one step: `httpServer` starts once all three listeners have started. On stop the order reverses: `httpServer` stops first, then the three listeners at the same time, then `postgres`. Each listener's start receives the components which started before the group, here `postgres` alone; `httpServer` receives all four.
 
-Nesting alternates. A nested array runs in parallel, and an array inside a group is a sequence running alongside its siblings, whose members see their predecessors in that sequence:
+Nested arrays alternate. An array inside a group runs its entries in sequence, alongside the group's other entries:
 
 ```ts
 const system = createSystem([
@@ -319,9 +322,9 @@ const system = createSystem([
 ]);
 ```
 
-Reversal applies at every level on stop.
+Here `migrate` and then `emailListener` run in sequence while `smsListener` runs alongside them. Stopping reverses the order at every level.
 
-A group settles before a failure propagates, so cotillion always knows which components started and stops exactly those. One failure propagates as itself; several as an `AggregateError` containing every one, its message naming the components: "The components emailListener and smsListener failed to start". A sequence inside a group fails fast within itself while its siblings settle. Stop failures inside a group are treated the same way. A stop or timeout which interrupts a group takes precedence over failures within it, and a timeout's message names every component in flight.
+If a component in a group fails to start, the rest of the group is allowed to finish first, so cotillion knows exactly which components started and stops those. One failure is rethrown as it is. Two or more are combined into an `AggregateError` whose message names the components, for example "The components emailListener and smsListener failed to start". Failures while stopping a group are handled the same way.
 
 ## Errors
 
