@@ -33,14 +33,14 @@ const abortError: Error = new AbortError('The start was aborted while waiting fo
 const abortedName: 'AbortError' = abortError instanceof AbortError ? abortError.name : 'AbortError';
 
 system.on(SystemEvent.StopSucceeded, () => {});
-system.on(SystemEvent.StartFailed, (error) => error.message);
+system.on(SystemEvent.StartFailed, ({ name, error }) => `${name} ${error.message}`);
 system.on(ComponentEvent.StartFailed, ({ name, error }) => `${name} ${error.message}`);
 system.on(ComponentEvent.StartAborted, ({ name, reason }) => `${name} ${reason}`);
 system.once(ComponentEvent.StopSucceeded, ({ name }) => name);
-system.off(SystemEvent.StopFailed, (error) => error.message);
+system.off(SystemEvent.StopFailed, ({ error }) => error.message);
 
 system.on('system_stop_succeeded', () => {});
-system.on('system_stop_failed', (error) => error.message);
+system.on('system_stop_failed', ({ name, error }) => `${name} ${error.message}`);
 system.on('component_start_skipped', ({ name, reason }) => `${name} ${reason}`);
 system.once('component_start_initiated', ({ name }) => name);
 system.off('component_stop_failed', ({ name, error }) => `${name} ${error.message}`);
@@ -59,8 +59,8 @@ system.on(ComponentEvent.StopSucceeded, ({ error }) => error);
 // @ts-expect-error an initiated component event carries no reason
 system.on('component_stop_initiated', ({ reason }) => reason);
 
-// @ts-expect-error a succeeded system event carries nothing
-system.on('system_start_succeeded', (error: Error) => error.message);
+// @ts-expect-error a succeeded system event carries no error
+system.on('system_start_succeeded', ({ error }) => error);
 
 // @ts-expect-error an aborted component was interrupted by a stop or a timeout, never skipped as missing
 const missingAbort: ComponentEventPayloads['component_start_aborted'] = { name: 'postgres', reason: 'missing' };

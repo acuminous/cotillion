@@ -205,12 +205,14 @@ Component event listeners receive a single object the above properties.
 
 | Event                  | Emitted when                                             | Payload |
 |------------------------|----------------------------------------------------------|---------|
-| system_start_initiated | A start has been initiated                               |         |
-| system_start_succeeded | Every component started                                  |         |
-| system_start_failed    | The start rejected, whether a component failed or the start timed out | error   |
-| system_stop_initiated  | A stop has been initiated                                |         |
-| system_stop_succeeded  | Every started component stopped                          |         |
-| system_stop_failed     | The stop rejected, whether failed or timed out           | error   |
+| system_start_initiated | A start has been initiated                               | name        |
+| system_start_succeeded | Every component started                                  | name        |
+| system_start_failed    | The start rejected, whether a component failed or the start timed out | name, error |
+| system_stop_initiated  | A stop has been initiated                                | name        |
+| system_stop_succeeded  | Every started component stopped                          | name        |
+| system_stop_failed     | The stop rejected, whether failed or timed out           | name, error |
+
+System event listeners receive a single object. `name` is the system's name from its options, or undefined. The two failed events also carry `error`, the error the operation rejected with.
 
 The event names are exported as the constants `ComponentEvent` and `SystemEvent`, used throughout this README. The string names in the tables work just as well:
 

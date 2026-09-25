@@ -296,6 +296,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
       names.map((name) => componentErrorOf[world.rejectedOperation](recorder, name)),
     );
   })
+  .then('the system events name the system $message', ({ world }, name) => {
+    deq([...world.eventRecorder.systemNames()], [name]);
+  })
   .then('the failed system $lifecycle event carries that error', ({ world }, lifecycle) => {
     eq(world.eventRecorder.errorOf(failedEventOf.system[lifecycle]), world.rejection);
   })

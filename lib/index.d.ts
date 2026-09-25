@@ -41,13 +41,13 @@ export interface ComponentEventPayloads {
   component_stop_skipped: { name: string; reason: SkipReason };
 }
 
-export interface SystemEventArguments {
-  system_start_initiated: [];
-  system_start_succeeded: [];
-  system_start_failed: [error: Error];
-  system_stop_initiated: [];
-  system_stop_succeeded: [];
-  system_stop_failed: [error: Error];
+export interface SystemEventPayloads {
+  system_start_initiated: { name: string | undefined };
+  system_start_succeeded: { name: string | undefined };
+  system_start_failed: { name: string | undefined; error: Error };
+  system_stop_initiated: { name: string | undefined };
+  system_stop_succeeded: { name: string | undefined };
+  system_stop_failed: { name: string | undefined; error: Error };
 }
 
 export type ComponentEventPayload = ComponentEventPayloads[ComponentEventName];
@@ -86,7 +86,9 @@ type ComponentOf<L> = L extends { start(...args: never[]): infer R } ? Produced<
 
 export type ComponentsOf<D> = { [L in LeavesOf<D> as NameOf<L>]: ComponentOf<L> };
 
-export type SystemEvents = { [E in ComponentEventName]: [payload: ComponentEventPayloads[E]] } & SystemEventArguments;
+export type SystemEvents = { [E in ComponentEventName]: [payload: ComponentEventPayloads[E]] } & {
+  [E in SystemEventName]: [payload: SystemEventPayloads[E]];
+};
 
 export interface System<C = Components> extends EventEmitter<SystemEvents> {
   readonly name: string | undefined;

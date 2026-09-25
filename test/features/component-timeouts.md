@@ -33,19 +33,19 @@ their errors: a component's names the component, the system's names the operatio
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
-  | system_start_failed       |               |         | error        |
-  | system_stop_initiated     |               |         |              |
+  | system_start_failed       |               |         | name, error  |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_skipped    | httpServer    | failure | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
   | component_stop_initiated  | postgres      |         | name         |
   | component_stop_succeeded  | postgres      |         | name         |
-  | system_stop_succeeded     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
 
 ### Scenario: A stop which exceeds the component's timeout
 
@@ -64,21 +64,21 @@ their errors: a component's names the component, the system's names the operatio
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_succeeded | emailListener |         | name         |
   | component_start_initiated | httpServer    |         | name         |
   | component_start_succeeded | httpServer    |         | name         |
-  | system_start_succeeded    |               |         |              |
-  | system_stop_initiated     |               |         |              |
+  | system_start_succeeded    |               |         | name         |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_initiated  | httpServer    |         | name         |
   | component_stop_succeeded  | httpServer    |         | name         |
   | component_stop_initiated  | emailListener |         | name         |
   | component_stop_failed     | emailListener |         | name, error  |
   | component_stop_skipped    | postgres      | failure | name, reason |
-  | system_stop_failed        |               |         | error        |
+  | system_stop_failed        |               |         | name, error  |
 
 ## Rule: A single timeout bounds both the start and the stop
 

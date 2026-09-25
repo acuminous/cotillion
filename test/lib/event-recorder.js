@@ -61,10 +61,14 @@ function createEventRecorder() {
     return onlyOne(
       recorded.filter((entry) => entry.event === event),
       `${event} events were recorded`,
-    );
+    ).error;
   }
 
-  return { record, trace, payloadOf, errorOf, next };
+  function systemNames() {
+    return new Set(recorded.filter((entry) => entry.event.startsWith('system_')).map((entry) => entry.payload.name));
+  }
+
+  return { record, trace, payloadOf, errorOf, systemNames, next };
 }
 
 function onlyOne(matches, description) {
@@ -80,8 +84,8 @@ function componentColumns(event, payload) {
   return { event, component: payload.name, reason: payload.reason, payload: Object.keys(payload).join(', ') };
 }
 
-function systemColumns(event, error) {
-  return { event, payload: error && 'error' };
+function systemColumns(event, payload) {
+  return { event, payload: Object.keys(payload).join(', ') };
 }
 
 function announcedEvents() {

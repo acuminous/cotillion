@@ -85,19 +85,19 @@ yet reached are skipped, and the stop rejects with the same error.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
-  | system_stop_initiated     |               |         |              |
+  | system_stop_initiated     |               |         | name         |
   | component_start_aborted   | emailListener | timeout | name, reason |
   | component_start_skipped   | httpServer    | timeout | name, reason |
-  | system_start_failed       |               |         | error        |
+  | system_start_failed       |               |         | name, error  |
   | component_stop_skipped    | httpServer    | timeout | name, reason |
   | component_stop_skipped    | emailListener | abort   | name, reason |
   | component_stop_initiated  | postgres      |         | name         |
   | component_stop_succeeded  | postgres      |         | name         |
-  | system_stop_succeeded     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
 
 ### Scenario: A component which cannot be aborted and finishes
 
@@ -116,20 +116,20 @@ yet reached are skipped, and the stop rejects with the same error.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
-  | system_stop_initiated     |               |         |              |
+  | system_stop_initiated     |               |         | name         |
   | component_start_succeeded | emailListener |         | name         |
   | component_start_skipped   | httpServer    | timeout | name, reason |
-  | system_start_failed       |               |         | error        |
+  | system_start_failed       |               |         | name, error  |
   | component_stop_skipped    | httpServer    | timeout | name, reason |
   | component_stop_initiated  | emailListener |         | name         |
   | component_stop_succeeded  | emailListener |         | name         |
   | component_stop_initiated  | postgres      |         | name         |
   | component_stop_succeeded  | postgres      |         | name         |
-  | system_stop_succeeded     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
 
 ### Scenario: A component which cannot be aborted and does not finish before the stop timeout
 
@@ -148,18 +148,18 @@ yet reached are skipped, and the stop rejects with the same error.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
-  | system_stop_initiated     |               |         |              |
+  | system_stop_initiated     |               |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | timeout | name, reason |
-  | system_start_failed       |               |         | error        |
+  | system_start_failed       |               |         | name, error  |
   | component_stop_skipped    | httpServer    | timeout | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
   | component_stop_skipped    | postgres      | timeout | name, reason |
-  | system_stop_failed        |               |         | error        |
+  | system_stop_failed        |               |         | name, error  |
 
 ## Rule: The stop timeout deems the component in flight to have timed out
 
@@ -180,21 +180,21 @@ yet reached are skipped, and the stop rejects with the same error.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_succeeded | emailListener |         | name         |
   | component_start_initiated | httpServer    |         | name         |
   | component_start_succeeded | httpServer    |         | name         |
-  | system_start_succeeded    |               |         |              |
-  | system_stop_initiated     |               |         |              |
+  | system_start_succeeded    |               |         | name         |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_initiated  | httpServer    |         | name         |
   | component_stop_succeeded  | httpServer    |         | name         |
   | component_stop_initiated  | emailListener |         | name         |
   | component_stop_failed     | emailListener |         | name, error  |
   | component_stop_skipped    | postgres      | timeout | name, reason |
-  | system_stop_failed        |               |         | error        |
+  | system_stop_failed        |               |         | name, error  |
 
 ### Scenario: Stopping again after a stop which timed out
 

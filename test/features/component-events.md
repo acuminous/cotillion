@@ -24,18 +24,18 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component  | payload |
   |---------------------------|------------|---------|
-  | system_start_initiated    |            |         |
+  | system_start_initiated    |            | name    |
   | component_start_initiated | postgres   | name    |
   | component_start_succeeded | postgres   | name    |
   | component_start_initiated | httpServer | name    |
   | component_start_succeeded | httpServer | name    |
-  | system_start_succeeded    |            |         |
-  | system_stop_initiated     |            |         |
+  | system_start_succeeded    |            | name    |
+  | system_stop_initiated     |            | name    |
   | component_stop_initiated  | httpServer | name    |
   | component_stop_succeeded  | httpServer | name    |
   | component_stop_initiated  | postgres   | name    |
   | component_stop_succeeded  | postgres   | name    |
-  | system_stop_succeeded     |            |         |
+  | system_stop_succeeded     |            | name    |
 
 ### Scenario: A system which was never started
 
@@ -45,12 +45,12 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - When the system is stopped
 - Then the recorded events are:
 
-  | event                  | component  | reason    | payload      |
-  |------------------------|------------|-----------|--------------|
-  | system_stop_initiated  |            |           |              |
-  | component_stop_skipped | httpServer | stopped   | name, reason |
-  | component_stop_skipped | postgres   | stopped   | name, reason |
-  | system_stop_succeeded  |            |           |              |
+  | event                  | component  | reason  | payload      |
+  |------------------------|------------|---------|--------------|
+  | system_stop_initiated  |            |         | name         |
+  | component_stop_skipped | httpServer | stopped | name, reason |
+  | component_stop_skipped | postgres   | stopped | name, reason |
+  | system_stop_succeeded  |            |         | name         |
 
 ## Rule: A component is announced before its function runs and after it settles
 
@@ -134,13 +134,13 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component  | reason  | payload      |
   |---------------------------|------------|---------|--------------|
-  | system_start_initiated    |            |         |              |
+  | system_start_initiated    |            |         | name         |
   | component_start_initiated | postgres   |         | name         |
   | component_start_succeeded | postgres   |         | name         |
   | component_start_skipped   | migrate    | missing | name, reason |
   | component_start_initiated | httpServer |         | name         |
   | component_start_succeeded | httpServer |         | name         |
-  | system_start_succeeded    |            |         |              |
+  | system_start_succeeded    |            |         | name         |
 
 ### Scenario: A component with no stop function
 
@@ -154,17 +154,17 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component | reason  | payload      |
   |---------------------------|-----------|---------|--------------|
-  | system_start_initiated    |           |         |              |
+  | system_start_initiated    |           |         | name         |
   | component_start_initiated | postgres  |         | name         |
   | component_start_succeeded | postgres  |         | name         |
   | component_start_initiated | migrate   |         | name         |
   | component_start_succeeded | migrate   |         | name         |
-  | system_start_succeeded    |           |         |              |
-  | system_stop_initiated     |           |         |              |
+  | system_start_succeeded    |           |         | name         |
+  | system_stop_initiated     |           |         | name         |
   | component_stop_skipped    | migrate   | missing | name, reason |
   | component_stop_initiated  | postgres  |         | name         |
   | component_stop_succeeded  | postgres  |         | name         |
-  | system_stop_succeeded     |           |         |              |
+  | system_stop_succeeded     |           |         | name         |
 
 ## Rule: A component already in the state the operation wants is skipped
 
@@ -183,13 +183,13 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component | reason  | payload      |
   |---------------------------|-----------|---------|--------------|
-  | system_start_initiated    |           |         |              |
+  | system_start_initiated    |           |         | name         |
   | component_start_initiated | postgres  |         | name         |
   | component_start_succeeded | postgres  |         | name         |
-  | system_start_succeeded    |           |         |              |
-  | system_start_initiated    |           |         |              |
+  | system_start_succeeded    |           |         | name         |
+  | system_start_initiated    |           |         | name         |
   | component_start_skipped   | postgres  | started | name, reason |
-  | system_start_succeeded    |           |         |              |
+  | system_start_succeeded    |           |         | name         |
 
 ### Scenario: Stopping a system which has already stopped
 
@@ -202,19 +202,19 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - Then postgres has stopped once
 - And the recorded events are:
 
-  | event                     | component | reason    | payload      |
-  |---------------------------|-----------|-----------|--------------|
-  | system_start_initiated    |           |           |              |
-  | component_start_initiated | postgres  |           | name         |
-  | component_start_succeeded | postgres  |           | name         |
-  | system_start_succeeded    |           |           |              |
-  | system_stop_initiated     |           |           |              |
-  | component_stop_initiated  | postgres  |           | name         |
-  | component_stop_succeeded  | postgres  |           | name         |
-  | system_stop_succeeded     |           |           |              |
-  | system_stop_initiated     |           |           |              |
-  | component_stop_skipped    | postgres  | stopped   | name, reason |
-  | system_stop_succeeded     |           |           |              |
+  | event                     | component | reason  | payload      |
+  |---------------------------|-----------|---------|--------------|
+  | system_start_initiated    |           |         | name         |
+  | component_start_initiated | postgres  |         | name         |
+  | component_start_succeeded | postgres  |         | name         |
+  | system_start_succeeded    |           |         | name         |
+  | system_stop_initiated     |           |         | name         |
+  | component_stop_initiated  | postgres  |         | name         |
+  | component_stop_succeeded  | postgres  |         | name         |
+  | system_stop_succeeded     |           |         | name         |
+  | system_stop_initiated     |           |         | name         |
+  | component_stop_skipped    | postgres  | stopped | name, reason |
+  | system_stop_succeeded     |           |         | name         |
 
 ## Rule: A failure skips the components the operation never reaches
 
@@ -234,18 +234,18 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
-  | system_start_failed       |               |         | error        |
-  | system_stop_initiated     |               |         |              |
+  | system_start_failed       |               |         | name, error  |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_skipped    | httpServer    | failure | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
   | component_stop_skipped    | postgres      | missing | name, reason |
-  | system_stop_succeeded     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
 
 ### Scenario: Stopping again after a start which failed
 
@@ -260,24 +260,24 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | httpServer    | failure | name, reason |
-  | system_start_failed       |               |         | error        |
-  | system_stop_initiated     |               |         |              |
+  | system_start_failed       |               |         | name, error  |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_skipped    | httpServer    | failure | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
   | component_stop_initiated  | postgres      |         | name         |
   | component_stop_succeeded  | postgres      |         | name         |
-  | system_stop_succeeded     |               |         |              |
-  | system_stop_initiated     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_skipped    | httpServer    | stopped | name, reason |
   | component_stop_skipped    | emailListener | stopped | name, reason |
   | component_stop_skipped    | postgres      | stopped | name, reason |
-  | system_stop_succeeded     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
 
 ### Scenario: A component with no start function after the one which failed
 
@@ -291,18 +291,18 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_failed    | emailListener |         | name, error  |
   | component_start_skipped   | migrate       | failure | name, reason |
-  | system_start_failed       |               |         | error        |
-  | system_stop_initiated     |               |         |              |
+  | system_start_failed       |               |         | name, error  |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_skipped    | migrate       | failure | name, reason |
   | component_stop_skipped    | emailListener | failure | name, reason |
   | component_stop_skipped    | postgres      | missing | name, reason |
-  | system_stop_succeeded     |               |         |              |
+  | system_stop_succeeded     |               |         | name         |
 
 ### Scenario: A component fails to stop
 
@@ -318,17 +318,17 @@ and a system nobody is listening to behaves exactly like one somebody is.
 
   | event                     | component     | reason  | payload      |
   |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         |              |
+  | system_start_initiated    |               |         | name         |
   | component_start_initiated | postgres      |         | name         |
   | component_start_succeeded | postgres      |         | name         |
   | component_start_initiated | emailListener |         | name         |
   | component_start_succeeded | emailListener |         | name         |
-  | system_start_succeeded    |               |         |              |
-  | system_stop_initiated     |               |         |              |
+  | system_start_succeeded    |               |         | name         |
+  | system_stop_initiated     |               |         | name         |
   | component_stop_initiated  | emailListener |         | name         |
   | component_stop_failed     | emailListener |         | name, error  |
   | component_stop_skipped    | postgres      | failure | name, reason |
-  | system_stop_failed        |               |         | error        |
+  | system_stop_failed        |               |         | name, error  |
 
 ## Rule: Events are notifications, never behaviour
 
