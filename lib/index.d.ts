@@ -91,7 +91,8 @@ export interface System<C = Components> extends EventEmitter<SystemEvents> {
   start(): Promise<C>;
   stop(): Promise<void>;
   restart(): Promise<C>;
-  stopOn(...events: string[]): () => void;
+  stopOn(...signals: string[]): () => void;
+  exitOn(...signals: string[]): () => void;
 }
 
 export class TimeoutError extends Error {

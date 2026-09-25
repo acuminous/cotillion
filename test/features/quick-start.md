@@ -2,8 +2,9 @@
 
 The README's quick start, run. A stand-in takes the place of the postgres client, since pg is not
 a dependency, and the HTTP server is a real one listening on a free port, reached in-process. The
-system is created with the quick start's timeouts and bound to a process event in place of the
-termination signals; exiting is left to the reader, as the README leaves it.
+system is created with the quick start's timeouts and bound with stopOn to a process event in place of
+exitOn and the termination signals, since a test cannot let the process exit; the exit itself is
+proven in the exiting feature.
 
 ## Background:
 

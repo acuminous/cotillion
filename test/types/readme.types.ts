@@ -1,5 +1,5 @@
 import type { ComponentDefinition } from '../../lib/index';
-import { ComponentEvent, SystemEvent, createSystem } from '../../lib/index';
+import { ComponentEvent, createSystem } from '../../lib/index';
 
 interface Client {
   connect(): Promise<void>;
@@ -60,12 +60,7 @@ async function quickStart() {
 
   system.on(ComponentEvent.StartSucceeded, ({ name }) => name);
   system.on(ComponentEvent.StartFailed, ({ name, error }) => `${name} ${error.message}`);
-  system.on(SystemEvent.StartFailed, () => {
-    process.exitCode = 1;
-  });
-  system.on(SystemEvent.StopSucceeded, () => process.exit());
-
-  system.stopOn('SIGTERM', 'SIGINT');
+  system.exitOn('SIGTERM', 'SIGINT');
 
   const { postgres: client, httpServer: server } = await system.start();
 

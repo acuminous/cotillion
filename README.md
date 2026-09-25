@@ -5,9 +5,8 @@
 [![CI](https://github.com/acuminous/cotillion/actions/workflows/qa.yml/badge.svg)](https://github.com/acuminous/cotillion/actions/workflows/qa.yml)
 [![Coverage](https://codecov.io/gh/acuminous/cotillion/branch/main/graph/badge.svg)](https://codecov.io/gh/acuminous/cotillion)
 [![Node.js](https://img.shields.io/node/v/cotillion)](https://nodejs.org)
--->
 [![License](https://img.shields.io/npm/l/cotillion)](LICENSE)
-
+-->
 
 Cotillion is a module for the graceful orchestration of network components (database clients, http servers, etc). Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is often forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
 
@@ -43,7 +42,7 @@ Cotillion has no production dependencies.
 
 ## Quick start
 
-The entrypoint lists the components in start order, wires the exit, and starts the system.
+The entrypoint lists the components in start order, stops and exits on termination signals, and starts the system.
 
 **index.ts**
 
@@ -59,11 +58,7 @@ system.on(ComponentEvent.StopSucceeded, ({ name }) => console.log(`${name} stopp
 system.on(ComponentEvent.StartFailed, ({ name, error }) => console.error(`${name} failed to start`, error));
 system.on(ComponentEvent.StopFailed, ({ name, error }) => console.error(`${name} failed to stop`, error));
 
-system.on(SystemEvent.StartFailed, () => { process.exitCode = 1; });
-system.on(SystemEvent.StopSucceeded, () => process.exit());
-system.on(SystemEvent.StopFailed, () => process.exit(1));
-
-system.stopOn('SIGTERM', 'SIGINT');
+system.exitOn('SIGTERM', 'SIGINT');
 
 const { postgres: client, httpServer: server } = await system.start();
 
@@ -269,15 +264,17 @@ A component which exceeds its own limit is treated as a failure. Its failed even
 
 ## Signals
 
-`system.stopOn(...signals)` calls `stop()` when the process emits any of the named events:
+`system.exitOn(...signals)` stops the system when the process receives any of the named signals, and ends the process once the stop has finished:
 
 ```ts
-system.stopOn('SIGTERM', 'SIGINT');
+system.exitOn('SIGTERM', 'SIGINT');
 ```
 
-Use it for the termination signals your platform sends. Further events during the stop do nothing more. The listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system. `stopOn` returns a function which removes the listeners.
+The exit code is 0 after a successful stop, and 1 after a failed stop or after a stop which followed a failed start. It exits on any stop, including one you call yourself or a `restart()`. Call it before `start()`, so that a signal arriving during startup interrupts the start; `start()` then rejects only once the stop has finished, by which time the process has exited, so log start failures from the event listeners rather than from a catch block. `exitOn` returns a function which removes its listeners.
 
-Cotillion never calls `process.exit`. Add listeners to exit when the stop has finished:
+`system.stopOn(...signals)` does the same without exiting, for when you want to decide how the process ends yourself. Use one or the other for a given signal. Any process event will do as a signal; further signals during the stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system.
+
+Cotillion calls `process.exit` only from `exitOn`. With `stopOn`, exit from your own listeners:
 
 ```ts
 system.on(SystemEvent.StartFailed, () => { process.exitCode = 1; });
@@ -285,11 +282,9 @@ system.on(SystemEvent.StopSucceeded, () => process.exit());
 system.on(SystemEvent.StopFailed, () => process.exit(1));
 ```
 
-The first line matters. When a start fails, cotillion stops the system, and that stop usually succeeds; without the first line the process would exit with code 0 after a failed start.
+The first line matters. When a start fails, cotillion stops the system, and that stop usually succeeds; without the first line the process would exit with code 0 after a failed start. These three listeners are exactly what `exitOn` adds.
 
-Call `stopOn` before `start()`, so that a signal arriving during startup interrupts it. In that case `start()` rejects with an `AbortError`, but only after the stop has finished, by which time the exit listener has ended the process. With these listeners in place, `start()` never rejects into your code, so log start failures from the event listeners rather than from a catch block.
-
-A stop begun by a process event reports its outcome only through the system events. Its failure is never an unhandled rejection.
+A stop begun by a signal reports its outcome only through the system events. Its failure is never an unhandled rejection.
 
 ## Parallel groups
 
@@ -326,7 +321,7 @@ If a component in a group fails to start, the rest of the group is allowed to fi
 
 | Error          | Thrown when                                                                                                                      |
 |----------------|----------------------------------------------------------------------------------------------------------------------------------|
-| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn given no events, or one which is not a string. |
+| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn and exitOn given no signals, or one which is not a string. |
 | TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned. |
 | AbortError     | A stop interrupted the start. Thrown by start() once the stop has finished, and carried as the reason of the AbortSignal passed to each abortable component's start function; the message names the components whose start was in flight. |
 | AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                          |

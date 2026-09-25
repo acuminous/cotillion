@@ -5,7 +5,7 @@ two events tables must name exactly the events the library exports, and the reco
 scenario uses refuses any event outside those exports, so an event can neither be announced
 without being documented nor documented without being announced. The errors table must name
 exactly the error types the library constructs. And the promises the README makes about the
-package must match the package.
+package, and about who calls process.exit, must match the code.
 
 ## Rule: The events tables mirror the exported event names
 
@@ -38,7 +38,7 @@ package must match the package.
 - Given the README
 - Then the package has no production dependencies
 
-### Scenario: Cotillion never calls process.exit
+### Scenario: Cotillion calls process.exit only from exitOn
 
 - Given the README
-- Then the library never calls process.exit
+- Then the library calls process.exit only where exitOn is implemented

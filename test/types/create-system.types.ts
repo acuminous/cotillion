@@ -16,6 +16,7 @@ const components: Promise<Components> = system.start();
 const stopped: Promise<void> = system.stop();
 const restarted: Promise<Components> = system.restart();
 const unbind: () => void = system.stopOn('SIGTERM', 'SIGINT');
+const unbindExit: () => void = system.exitOn('SIGTERM', 'SIGINT');
 
 const bounded: System = createSystem([], { timeouts: 30000 });
 const boundedSeparately: System = createSystem([], { timeouts: { start: 30000, stop: 10000 } });

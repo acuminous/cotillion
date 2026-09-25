@@ -34,12 +34,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     deq(packageJson().dependencies, undefined);
     deq(packageJson().peerDependencies, undefined);
   })
-  .then('the library never calls process.exit', () => {
+  .then('the library calls process.exit only where exitOn is implemented', () => {
+    const callers = librarySources().filter((source) => source.text.includes('process.exit'));
     deq(
-      librarySources()
-        .filter((source) => source.text.includes('process.exit'))
-        .map((source) => source.file),
-      [],
+      callers.map((source) => source.file),
+      ['exit-listeners.js'],
     );
   });
 

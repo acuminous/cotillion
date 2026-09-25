@@ -24,7 +24,8 @@ a test, and the module layout stays as small as that specification allows.
 | lib/validate-definition.js | the eager validation createSystem applies to the system definition               |
 | lib/validate-options.js    | the eager validation createSystem applies to its options                         |
 | lib/validate-timeout.js    | the timeout shape check the two validations share                                |
-| lib/validate-events.js     | the eager validation stopOn applies to its process events                        |
+| lib/validate-events.js     | the eager validation stopOn and exitOn apply to their signals                    |
+| lib/exit-listeners.js      | the three exit listeners exitOn adds, the only place the library calls process.exit |
 | lib/index.d.ts             | the hand-written type definitions, importing only Node's EventEmitter type       |
 
 The table grows as the implementation lands; the conventions below are binding from the first
