@@ -1,12 +1,8 @@
 # cotillion
 
-Graceful orchestration of network components.
+Graceful orchestration of network components (database clients, http servers, etc).
 
-![An engraving of an 18th century cotillion: four couples dancing a figure while musicians play from a gallery](https://raw.githubusercontent.com/acuminous/cotillion/main/assets/the-cotillion-dance.jpg)
-
-*The Cotillion Dance, engraved by James Caldwall after John Collet, 1771. [Yale Center for British Art, CC0](https://commons.wikimedia.org/wiki/File:James_Caldwall_-_The_Cotillion_Dance_-_B1977.14.11242_-_Yale_Center_for_British_Art.jpg).*
-
-A cotillion is a formal group dance of the 18th century, performed in figures called in strict order. This library calls the figures for your application's network components: database clients, queue listeners, HTTP servers. You supply a definition: an array of named component definitions with asynchronous start and stop functions. Cotillion starts them in the order you declare, sequentially or in parallel groups, stops them in the reverse order, bounds starting and stopping with timeouts, and stops cleanly when a start is interrupted.
+You supply a definition: an array of named component definitions with asynchronous start and stop functions. Cotillion starts them in the order you declare, sequentially or in parallel groups, stops them in the reverse order, bounds starting and stopping with timeouts, and stops cleanly when a start is interrupted.
 
 ## Contents
 
@@ -24,6 +20,7 @@ A cotillion is a formal group dance of the 18th century, performed in figures ca
 - [Parallel groups](#parallel-groups)
 - [Errors](#errors)
 - [License](#license)
+- [The name](#the-name)
 
 ## The problem
 
@@ -404,3 +401,11 @@ A component's own error passes through unwrapped, so your existing error handlin
 ## License
 
 MIT
+
+## The name
+
+A cotillion is a formal group dance of the 18th century, performed in figures called in strict order. This library calls the figures for your application's network components: database clients, queue listeners, HTTP servers.
+
+![An engraving of an 18th century cotillion: four couples dancing a figure while musicians play from a gallery](https://raw.githubusercontent.com/acuminous/cotillion/main/assets/the-cotillion-dance.jpg)
+
+*The Cotillion Dance, engraved by James Caldwall after John Collet, 1771. [Yale Center for British Art, CC0](https://commons.wikimedia.org/wiki/File:James_Caldwall_-_The_Cotillion_Dance_-_B1977.14.11242_-_Yale_Center_for_British_Art.jpg).*
