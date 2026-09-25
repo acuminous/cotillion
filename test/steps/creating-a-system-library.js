@@ -35,7 +35,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     definitionNamed(world.definition, name)[lifecycle] = value;
   })
   .given('$component has a timeout of $value', ({ world }, name, value) => {
-    definitionNamed(world.definition, name).timeout = value;
+    definitionNamed(world.definition, name).timeouts = value;
   })
   .given('$component has an abortable of $value', ({ world }, name, value) => {
     definitionNamed(world.definition, name).abortable = value;
@@ -50,7 +50,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     optionsOf(world)[key] = 1000;
   })
   .given('$component has an? $key timeout of $value', ({ world }, name, key, value) => {
-    definitionNamed(world.definition, name).timeout = { [key]: value };
+    definitionNamed(world.definition, name).timeouts = { [key]: value };
   })
   .when('the system is created', ({ world }) => {
     world.error = errorFrom(() => createSystem(world.definition, world.options));

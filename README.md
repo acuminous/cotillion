@@ -180,7 +180,7 @@ import type { Components } from 'cotillion';
 const emailListener = {
   name: 'email-listener',
   abortable: true,
-  timeout: { start: 5000, stop: 30000 },
+  timeouts: { start: 5000, stop: 30000 },
   async start(components: Components, signal: AbortSignal) {
     // acquire connections, subscribe, listen
   },
@@ -193,7 +193,7 @@ const emailListener = {
 - `name` is required and unique within the system. It keys the [components](#components), identifies the component in [events](#events) and appears in error messages.
 - `start` and `stop` are optional; a missing function is skipped. `start` receives the [components](#components) which started before it and an AbortSignal which only fires if the component is abortable. `stop` receives nothing. Whatever start returns is the component.
 - `abortable` defaults to false. Declare it only if the start observes its signal and settles promptly once it fires; cotillion cannot tell.
-- `timeout` bounds the component's own start and stop: a number for both, or an object with `start` and `stop` keys. There are no defaults. See [Component timeouts](#component-timeouts).
+- `timeouts` bounds the component's own start and stop: a number for both, or an object with `start` and `stop` keys. There are no defaults. See [Component timeouts](#component-timeouts).
 
 A definition may carry whatever else its module wants to expose, such as the getter above. The array of definitions, groups included, is the first argument to `createSystem`; the optional second carries the system's [timeouts](#timeouts).
 
@@ -291,7 +291,7 @@ A component may also bound its own start and stop:
 ```ts
 const emailListener = {
   name: 'email-listener',
-  timeout: { start: 5000, stop: 30000 },
+  timeouts: { start: 5000, stop: 30000 },
   // ...
 };
 ```

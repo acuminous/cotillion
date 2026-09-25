@@ -64,7 +64,7 @@ const missingAbort: ComponentEventPayloads['component_start_aborted'] = { name: 
 
 const postgres = {
   name: 'postgres',
-  timeout: { start: 5000, stop: 30000 },
+  timeouts: { start: 5000, stop: 30000 },
   async start(components: Components, signal: AbortSignal) {
     return { connected: !signal.aborted };
   },
@@ -72,7 +72,7 @@ const postgres = {
 };
 
 const migrate = { name: 'migrate' };
-const emailListener = { name: 'emailListener', timeout: 5000 };
+const emailListener = { name: 'emailListener', timeouts: 5000 };
 const httpServer = {
   name: 'httpServer',
   async start({ postgres }: { postgres: { connected: boolean } }) {
@@ -89,7 +89,7 @@ const systemFromNothing: System = createSystem();
 const systemFromAnonymousComponents: System = createSystem([{}]);
 
 // @ts-expect-error a timeout is a number of milliseconds, not a description
-const timeoutWhichIsNotANumber: System = createSystem([{ name: 'postgres', timeout: 'soon' }]);
+const timeoutWhichIsNotANumber: System = createSystem([{ name: 'postgres', timeouts: 'soon' }]);
 
 // @ts-expect-error start is a function, not a description
 const startWhichIsNotAFunction: System = createSystem([{ name: 'postgres', start: 'soon' }]);

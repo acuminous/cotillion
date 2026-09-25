@@ -64,7 +64,7 @@ export interface ComponentDefinition {
   abortable?: boolean;
   start?(components: Components, signal: AbortSignal): unknown;
   stop?(): unknown;
-  timeout?: number | Timeouts;
+  timeouts?: number | Timeouts;
   [extra: string]: unknown;
 }
 
