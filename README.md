@@ -149,9 +149,9 @@ const emailListener = {
 ```
 
 - `name` is required and must be unique. It is the component's key in the components object, and identifies the component in events and error messages.
-- `start` is optional. It is called with two arguments: an object holding the components which have already started, keyed by name, and an AbortSignal. Whatever it returns is the component. Without a start function the component is `undefined`.
+- `start` is optional. It is called with two arguments: an object holding the components which have already started, keyed by name, and an [AbortSignal](https://nodejs.org/api/globals.html#class-abortsignal) which fires if cotillion needs the start to give up, because the system is being stopped or a timeout has expired. Whatever it returns is the component. Without a start function the component is `undefined`.
 - `stop` is optional. It is called with no arguments.
-- `abortable` is optional and defaults to false. Set it to true only if the start function watches its signal and gives up promptly when the signal fires. See [Stopping during a start](#stopping-during-a-start).
+- `abortable` is optional and defaults to false. Set it to true only if the start function watches its AbortSignal and gives up promptly when it fires. See [Stopping during a start](#stopping-during-a-start).
 - `timeouts` is optional. It limits how long this component's own start and stop may take, in milliseconds: a number for both, or an object with `start` and `stop` keys. See [Component timeouts](#component-timeouts).
 
 The definition may have other properties too, such as the `component` getter in the quick start. Pass the array of definitions to `createSystem` as its first argument, and the system's options as its second.
@@ -185,7 +185,7 @@ The same object is passed to each start function as its first argument, holding 
 
 ## Events
 
-A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemitter). It emits a component event each time a component starts, stops, fails or is skipped, and a system event when a start or a stop begins and when it finishes. Use them to log the lifecycle and to exit the process. Nothing depends on your listening to them.
+A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemitter). It emits a component event each time a component starts, stops, fails or is skipped, and a system event when a start or a stop begins and when it finishes. Use them to log the lifecycle and to exit the process.
 
 ### Component events
 
@@ -201,9 +201,7 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | component_stop_failed     | A component's stop rejected                                                                                                                                             | name, error  |
 | component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function | name, reason |
 
-Component event listeners receive a single object. `name` is the component's name. `error` is the error the component's function threw. `reason` says why a component was skipped or aborted: `'timeout'`, `'abort'`, `'failure'` (an earlier component failed), `'missing'` (no function), `'started'` (already started) or `'stopped'` (already stopped).
-
-Every operation announces every component, including the ones it does not run, so a shutdown trace always names every component.
+Component event listeners receive a single object the above properties.
 
 ### System events
 
@@ -216,8 +214,6 @@ Every operation announces every component, including the ones it does not run, s
 | system_stop_succeeded  | Every started component stopped                          |         |
 | system_stop_failed     | The stop rejected, whether failed or timed out           | error   |
 
-The two failed events receive the error the operation rejected with. The others have no payload.
-
 The event names are exported as the constants `ComponentEvent` and `SystemEvent`, used throughout this README. The string names in the tables work just as well:
 
 ```ts
@@ -225,25 +221,38 @@ system.on('component_start_failed', ({ name, error }) => logger.error(`${name} f
 system.on('system_stop_succeeded', () => process.exit());
 ```
 
-No event is named `error`, so Node.js never throws for a missing listener.
-
-## Timeouts
+## System timeouts
 
 You can limit how long a start and a stop may take, in milliseconds:
+
+```ts
+const system = createSystem(definition, { timeouts: 30000 });
+```
+or
 
 ```ts
 const system = createSystem(definition, { timeouts: { start: 30000, stop: 10000 } });
 ```
 
-A number applies the same limit to both. The object form sets them separately, and either may be left out, in which case there is no limit.
+Setting timeouts to a number applies the same limit to all system timeouts. The object form sets them separately, and either may be left out, in which case there is no limit.
 
-If the start takes longer than its limit, cotillion stops the components which had started, and `start()` rejects with a `TimeoutError` naming the component it was waiting for. A component which is still starting is aborted if it is abortable, and waited for if it is not.
+If the system start takes longer than its limit, cotillion stops the components which had started, and `start()` rejects with a `TimeoutError` naming the component it was waiting for. Another component which is still starting is aborted if it is abortable, and waited for if it is not.
 
-If the stop takes longer than its limit, `stop()` rejects with a `TimeoutError` naming the component it was waiting for. Cotillion never interrupts a stop function; the component is treated as having failed to stop, and its function is left running. This limit is what keeps a shutdown within an orchestrator's grace period, whatever a component does.
+If the system stop takes longer than its limit, `stop()` rejects with a `TimeoutError` naming the component it was waiting for. Cotillion never interrupts a stop function; the component is treated as having failed to stop, and its function is left running. 
 
-### Component timeouts
+## Component timeouts
 
-A component can also limit its own start and stop:
+A component can also limit its own start and stop durations. As with the system, the timeouts can be specified as a number or object:
+
+```ts
+const emailListener = {
+  name: 'email-listener',
+  timeouts: 10000,
+  // ...
+};
+```
+
+or
 
 ```ts
 const emailListener = {
@@ -253,15 +262,15 @@ const emailListener = {
 };
 ```
 
-A number applies to both; the object form sets them separately. There are no defaults.
+A number applies to all timeouts; the object form sets them separately. There are no defaults.
 
-A component which exceeds its own limit is treated as if its function had thrown: its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", the operation continues as after any failure, and the function is left running. If the component is abortable, its start signal fires as well. When a component limit and a system limit are both set, whichever expires first applies.
+A component which exceeds its own limit is treated as a failure. Its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", the operation continues as after any failure, and the function is left running. If the component is abortable, the AbortSignal passed to its start function fires as well, so the function can give up.
 
 ## Stopping during a start
 
 Calling `stop()` while the system is starting interrupts the start:
 
-- A component whose start is in progress and which is `abortable` has its signal fired. If it then rejects, it is announced as `component_start_aborted`. If it resolves anyway, it is announced as started and will be stopped.
+- A component whose start is in progress and which is `abortable` has the AbortSignal passed to its start function fired. If it then rejects, it is announced as `component_start_aborted`. If it resolves anyway, it is announced as started and will be stopped.
 - A component whose start is in progress and which is not abortable is waited for.
 - Components not yet reached are skipped.
 
@@ -332,7 +341,7 @@ If a component in a group fails to start, the rest of the group is allowed to fi
 |----------------|----------------------------------------------------------------------------------------------------------------------------------|
 | Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn given no events, or one which is not a string. |
 | TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned. |
-| AbortError     | A stop interrupted the start. Thrown by start() once the stop has finished, and carried as the reason of each abortable component's signal; the message names the components whose start was in flight. |
+| AbortError     | A stop interrupted the start. Thrown by start() once the stop has finished, and carried as the reason of the AbortSignal passed to each abortable component's start function; the message names the components whose start was in flight. |
 | AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                          |
 
 A component's own error passes through unwrapped, so your existing error handling keeps working.
