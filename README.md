@@ -284,8 +284,6 @@ system.on(SystemEvent.StopFailed, () => process.exit(1));
 
 The first line matters. When a start fails, cotillion stops the system, and that stop usually succeeds; without the first line the process would exit with code 0 after a failed start. These three listeners are exactly what `exitOn` adds.
 
-A stop begun by a signal reports its outcome only through the system events. Its failure is never an unhandled rejection.
-
 ## Parallel groups
 
 Put components in a nested array to start them at the same time:
