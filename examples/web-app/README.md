@@ -1,6 +1,6 @@
-# cotillion example: a skeleton service
+# cotillion example: a web app
 
-A skeleton service built on cotillion. Postgres and redis start in parallel, then a [Hono](https://hono.dev/) HTTP server which uses both; on SIGTERM or SIGINT they stop in reverse and the process exits.
+A web app built on cotillion. Postgres and redis start in parallel, then a [Hono](https://hono.dev/) HTTP server which uses both; on SIGTERM or SIGINT they stop in reverse and the process exits.
 
 ```sh
 npm install

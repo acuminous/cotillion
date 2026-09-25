@@ -40,7 +40,7 @@ Requirements:
 
 Cotillion has no production dependencies.
 
-A runnable skeleton service, with postgres, redis and a Hono HTTP server on Docker, lives in [examples/skeleton](examples/skeleton). The published package includes it, along with the feature tests under [test/features](test/features), which describe every behaviour in detail.
+A runnable web app, with postgres, redis and a Hono HTTP server on Docker, lives in [examples/web-app](examples/web-app). The published package includes it, along with the feature tests under [test/features](test/features), which describe every behaviour in detail.
 
 ## Quick start
 
