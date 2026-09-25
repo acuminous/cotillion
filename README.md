@@ -126,7 +126,7 @@ export const httpServer = {
 } as const satisfies ComponentDefinition;
 ```
 
-The components come back from `start()` keyed by name. Each definition also exposes what its start created through a `component` getter, which is how the HTTP server reaches the postgres client: the getter throws if read before the component has started, and the declared order rules that out, since postgres starts first and stops last. A definition is a plain object, so it can carry a getter like that, or anything else its module wants to expose. The alternative is to take the client from the [components](#components) each start is given, `async start({ postgres }: { postgres: pg.Client })`, and skip the import; mix the two styles freely.
+The components come back from `start()` keyed by name. Each definition also exposes what its start created through a `component` getter, which is one way other parts of the application can get a reference to a component once it has started: import the definition and read the getter, as the HTTP server does with postgres. The getter throws if read before the component has started, which the declared order rules out for anything started after it. A definition is a plain object, so it can carry a getter like that, or anything else its module wants to expose. Another way is to take the component from the [components](#components) each start is given, `async start({ postgres }: { postgres: pg.Client })`; mix the two freely.
 
 ## Defining components
 
