@@ -40,6 +40,8 @@ Requirements:
 
 Cotillion has no production dependencies.
 
+A runnable skeleton service, with postgres, redis and a Hono HTTP server on Docker, lives in [examples/skeleton](examples/skeleton).
+
 ## Quick start
 
 The entrypoint lists the components in start order, stops and exits on termination signals, and starts the system.
