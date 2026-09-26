@@ -9,28 +9,17 @@ const system = createSystem([[postgres, redis], app, httpServer], {
   timeouts: { start: 30000, stop: 10000 },
 });
 
-type Progress = { name: string | undefined };
-type Failure = Progress & { error: Error };
+system.on(SystemEvent.StartInitiated, ({ name }) => console.log(`${name} system is starting`));
+system.on(SystemEvent.StartSucceeded, ({ name }) => console.log(`${name} system started`));
+system.on(SystemEvent.StartFailed, ({ name, error }) => console.error(`${name} system failed to start`, error));
+system.on(SystemEvent.StopInitiated, ({ name }) => console.log(`${name} system is stopping`));
+system.on(SystemEvent.StopSucceeded, ({ name }) => console.log(`${name} system stopped`));
+system.on(SystemEvent.StopFailed, ({ name, error }) => console.error(`${name} system failed to stop`, error));
 
-const progress = [
-  [SystemEvent.StartInitiated, 'system is starting'],
-  [SystemEvent.StartSucceeded, 'system started'],
-  [SystemEvent.StopInitiated, 'system is stopping'],
-  [SystemEvent.StopSucceeded, 'system stopped'],
-  [ComponentEvent.StartSucceeded, 'component started'],
-  [ComponentEvent.StopSucceeded, 'component stopped'],
-] as const;
-
-const failures = [
-  [SystemEvent.StartFailed, 'system failed to start'],
-  [SystemEvent.StopFailed, 'system failed to stop'],
-  [ComponentEvent.StartFailed, 'component failed to start'],
-  [ComponentEvent.StopFailed, 'component failed to stop'],
-] as const;
-
-for (const [event, message] of progress) system.on(event, ({ name }: Progress) => console.log(`${name} ${message}`));
-for (const [event, message] of failures)
-  system.on(event, ({ name, error }: Failure) => console.error(`${name} ${message}`, error));
+system.on(ComponentEvent.StartSucceeded, ({ name }) => console.log(`${name} component started`));
+system.on(ComponentEvent.StopSucceeded, ({ name }) => console.log(`${name} component stopped`));
+system.on(ComponentEvent.StartFailed, ({ name, error }) => console.error(`${name} component failed to start`, error));
+system.on(ComponentEvent.StopFailed, ({ name, error }) => console.error(`${name} component failed to stop`, error));
 
 system.exitOn('SIGTERM', 'SIGINT');
 
