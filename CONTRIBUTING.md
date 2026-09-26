@@ -33,7 +33,7 @@ commit.
 
 ## Code conventions
 
-The house style, per [yadda's CONTRIBUTORS.md](https://github.com/acuminous/yadda/blob/master/CONTRIBUTORS.md):
+The house style:
 
 - **The package ships lib/, test/ and examples/.** The feature tests and the example are part
   of what a user, or an agent working on their behalf, can read to learn the behaviour, so they
