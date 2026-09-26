@@ -274,11 +274,14 @@ system.exitOn('SIGTERM', 'SIGINT');
 
 The exit code is 0 after a successful stop, and 1 after a failed stop or after a stop which followed a failed start. It exits on any stop, including one you call yourself or a `restart()`. Call it before `start()`, so that a signal arriving during startup interrupts the start; `start()` then rejects only once the stop has finished, by which time the process has exited, so log start failures from the event listeners rather than from a catch block. `exitOn` returns a function which removes its listeners.
 
+`system.stopOn(...signals)` does the same without exiting, for when you want to decide how the process ends yourself. 
+
 ```ts
 system.stopOn('SIGTERM', 'SIGINT');
 ```
 
-`system.stopOn(...signals)` does the same without exiting, for when you want to decide how the process ends yourself. Use one or the other for a given signal. Any process event will do as a signal; further signals during the stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system.
+
+Use one or the other for a given signal. Any process event will do as a signal; further signals during the stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system.
 
 Cotillion calls `process.exit` only from `exitOn`. With `stopOn`, exit from your own listeners:
 
