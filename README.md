@@ -1,12 +1,10 @@
 # Cotillion
 
-<!--
 [![NPM Version](https://img.shields.io/npm/v/cotillion)](https://www.npmjs.com/package/cotillion)
 [![CI](https://github.com/acuminous/cotillion/actions/workflows/qa.yml/badge.svg)](https://github.com/acuminous/cotillion/actions/workflows/qa.yml)
 [![Coverage](https://codecov.io/gh/acuminous/cotillion/branch/main/graph/badge.svg)](https://codecov.io/gh/acuminous/cotillion)
 [![Node.js](https://img.shields.io/node/v/cotillion)](https://nodejs.org)
 [![License](https://img.shields.io/npm/l/cotillion)](LICENSE)
--->
 
 Cotillion is a module for the graceful orchestration of network components (database clients, http servers, etc). Applications depend on network components which must start in order and stop in reverse: the HTTP server must not accept requests before the database is connected, and the database must not disconnect while the queue listener is mid-message. Startup code usually gets this right. Graceful shutdown is often forgotten, and it is where the awkward cases live: a stop which hangs, an orchestrator's grace period, a second termination signal.
 
