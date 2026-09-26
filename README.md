@@ -12,6 +12,8 @@ Cotillion is a module for the graceful orchestration of network components (data
 
 Cotillion does the lifecycle and nothing else. You give it an array of components, each with a name and asynchronous start and stop functions. It starts them in order, stops them in reverse, applies timeouts, handles termination signals, and emits events you can log or exit on. Components which may start together go in a nested array.
 
+A runnable web app, with postgres, redis and a Hono HTTP server on Docker, lives in [examples/web-app](examples/web-app).
+
 ## Contents
 
 - [Installation](#installation)
@@ -39,8 +41,6 @@ Requirements:
 - Node.js 22 or later
 
 Cotillion has no production dependencies.
-
-A runnable web app, with postgres, redis and a Hono HTTP server on Docker, lives in [examples/web-app](examples/web-app). The published package includes it, along with the feature tests under [test/features](test/features), which describe every behaviour in detail.
 
 ## Quick start
 
