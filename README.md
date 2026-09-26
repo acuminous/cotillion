@@ -53,8 +53,8 @@ import { httpServer } from './components/http-server.ts';
 
 const system = createSystem([postgres, httpServer], { timeouts: { start: 30000, stop: 10000 } });
 
-system.on(ComponentEvent.StartSucceeded, ({ name }) => console.log(`${name} started`));
-system.on(ComponentEvent.StopSucceeded, ({ name }) => console.log(`${name} stopped`));
+system.on(ComponentEvent.StartSucceeded, ({ name, duration }) => console.log(`${name} started in ${duration.toFixed(0)}ms`));
+system.on(ComponentEvent.StopSucceeded, ({ name, duration }) => console.log(`${name} stopped in ${duration.toFixed(0)}ms`));
 system.on(ComponentEvent.StartFailed, ({ name, error }) => console.error(`${name} failed to start`, error));
 system.on(ComponentEvent.StopFailed, ({ name, error }) => console.error(`${name} failed to stop`, error));
 
@@ -188,29 +188,29 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | Event                     | Emitted when                                                                                                                                                            | Payload      |
 |---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|
 | component_start_initiated | A component's start has been initiated                                                                                                                                  | name         |
-| component_start_succeeded | A component's start has resolved                                                                                                                                        | name         |
-| component_start_failed    | A component's start rejected                                                                                                                                            | name, error  |
+| component_start_succeeded | A component's start has resolved                                                                                                                                        | name, duration |
+| component_start_failed    | A component's start rejected                                                                                                                                            | name, error, duration |
 | component_start_skipped   | A component's start was never attempted, because it had already started, an earlier component failed, the system was stopped or its start timeout expired while it was starting, or the component has no start function | name, reason |
-| component_start_aborted   | Cotillion aborted the component's start, because the system was stopped or its start timeout expired while the component was starting, and the component gave up when its AbortSignal fired | name, reason |
+| component_start_aborted   | Cotillion aborted the component's start, because the system was stopped or its start timeout expired while the component was starting, and the component gave up when its AbortSignal fired | name, reason, duration |
 | component_stop_initiated  | A component's stop has been initiated                                                                                                                                   | name         |
-| component_stop_succeeded  | A component's stop has resolved                                                                                                                                         | name         |
-| component_stop_failed     | A component's stop rejected                                                                                                                                             | name, error  |
+| component_stop_succeeded  | A component's stop has resolved                                                                                                                                         | name, duration |
+| component_stop_failed     | A component's stop rejected                                                                                                                                             | name, error, duration |
 | component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function | name, reason |
 
-Component event listeners receive a single object the above properties.
+Component event listeners receive a single object the above properties. `duration` is how long the start or stop took, in milliseconds, on the events which end one.
 
 ### System events
 
 | Event                  | Emitted when                                             | Payload |
 |------------------------|----------------------------------------------------------|---------|
 | system_start_initiated | A start has been initiated                               | name        |
-| system_start_succeeded | Every component started                                  | name        |
-| system_start_failed    | The start rejected, whether a component failed or the start timed out | name, error |
+| system_start_succeeded | Every component started                                  | name, duration |
+| system_start_failed    | The start rejected, whether a component failed or the start timed out | name, error, duration |
 | system_stop_initiated  | A stop has been initiated                                | name        |
-| system_stop_succeeded  | Every started component stopped                          | name        |
-| system_stop_failed     | The stop rejected, whether failed or timed out           | name, error |
+| system_stop_succeeded  | Every started component stopped                          | name, duration |
+| system_stop_failed     | The stop rejected, whether failed or timed out           | name, error, duration |
 
-System event listeners receive a single object. `name` is the system's name from its options, or undefined. The two failed events also carry `error`, the error the operation rejected with.
+System event listeners receive a single object. `name` is the system's name from its options, or undefined. The events which end an operation carry `duration` in milliseconds, and the two failed events carry `error`, the error the operation rejected with.
 
 The event names are exported as the constants `ComponentEvent` and `SystemEvent`, used throughout this README. The string names in the tables work just as well:
 

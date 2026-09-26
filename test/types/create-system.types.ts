@@ -36,7 +36,8 @@ system.on(SystemEvent.StopSucceeded, () => {});
 system.on(SystemEvent.StartFailed, ({ name, error }) => `${name} ${error.message}`);
 system.on(ComponentEvent.StartFailed, ({ name, error }) => `${name} ${error.message}`);
 system.on(ComponentEvent.StartAborted, ({ name, reason }) => `${name} ${reason}`);
-system.once(ComponentEvent.StopSucceeded, ({ name }) => name);
+system.once(ComponentEvent.StopSucceeded, ({ name, duration }) => `${name} ${duration.toFixed(0)}ms`);
+system.on(SystemEvent.StopSucceeded, ({ duration }) => duration.toFixed(0));
 system.off(SystemEvent.StopFailed, ({ error }) => error.message);
 
 system.on('system_stop_succeeded', () => {});
@@ -55,6 +56,9 @@ system.on('component_start_succeeded', ({ error }) => error);
 
 // @ts-expect-error a succeeded component event carries no error, in enum form either
 system.on(ComponentEvent.StopSucceeded, ({ error }) => error);
+
+// @ts-expect-error an initiated component event has not lasted any time yet
+system.on('component_start_initiated', ({ duration }) => duration);
 
 // @ts-expect-error an initiated component event carries no reason
 system.on('component_stop_initiated', ({ reason }) => reason);

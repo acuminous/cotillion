@@ -22,20 +22,20 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - And the system is stopped
 - Then the recorded events are:
 
-  | event                     | component  | payload |
-  |---------------------------|------------|---------|
-  | system_start_initiated    |            | name    |
-  | component_start_initiated | postgres   | name    |
-  | component_start_succeeded | postgres   | name    |
-  | component_start_initiated | httpServer | name    |
-  | component_start_succeeded | httpServer | name    |
-  | system_start_succeeded    |            | name    |
-  | system_stop_initiated     |            | name    |
-  | component_stop_initiated  | httpServer | name    |
-  | component_stop_succeeded  | httpServer | name    |
-  | component_stop_initiated  | postgres   | name    |
-  | component_stop_succeeded  | postgres   | name    |
-  | system_stop_succeeded     |            | name    |
+  | event                     | component  | payload        |
+  |---------------------------|------------|----------------|
+  | system_start_initiated    |            | name           |
+  | component_start_initiated | postgres   | name           |
+  | component_start_succeeded | postgres   | name, duration |
+  | component_start_initiated | httpServer | name           |
+  | component_start_succeeded | httpServer | name, duration |
+  | system_start_succeeded    |            | name, duration |
+  | system_stop_initiated     |            | name           |
+  | component_stop_initiated  | httpServer | name           |
+  | component_stop_succeeded  | httpServer | name, duration |
+  | component_stop_initiated  | postgres   | name           |
+  | component_stop_succeeded  | postgres   | name, duration |
+  | system_stop_succeeded     |            | name, duration |
 
 ### Scenario: A system which was never started
 
@@ -45,12 +45,12 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - When the system is stopped
 - Then the recorded events are:
 
-  | event                  | component  | reason  | payload      |
-  |------------------------|------------|---------|--------------|
-  | system_stop_initiated  |            |         | name         |
-  | component_stop_skipped | httpServer | stopped | name, reason |
-  | component_stop_skipped | postgres   | stopped | name, reason |
-  | system_stop_succeeded  |            |         | name         |
+  | event                  | component  | reason  | payload        |
+  |------------------------|------------|---------|----------------|
+  | system_stop_initiated  |            |         | name           |
+  | component_stop_skipped | httpServer | stopped | name, reason   |
+  | component_stop_skipped | postgres   | stopped | name, reason   |
+  | system_stop_succeeded  |            |         | name, duration |
 
 ## Rule: A component is announced before its function runs and after it settles
 
@@ -132,15 +132,15 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - When the system is started
 - Then the recorded events are:
 
-  | event                     | component  | reason  | payload      |
-  |---------------------------|------------|---------|--------------|
-  | system_start_initiated    |            |         | name         |
-  | component_start_initiated | postgres   |         | name         |
-  | component_start_succeeded | postgres   |         | name         |
-  | component_start_skipped   | migrate    | missing | name, reason |
-  | component_start_initiated | httpServer |         | name         |
-  | component_start_succeeded | httpServer |         | name         |
-  | system_start_succeeded    |            |         | name         |
+  | event                     | component  | reason  | payload        |
+  |---------------------------|------------|---------|----------------|
+  | system_start_initiated    |            |         | name           |
+  | component_start_initiated | postgres   |         | name           |
+  | component_start_succeeded | postgres   |         | name, duration |
+  | component_start_skipped   | migrate    | missing | name, reason   |
+  | component_start_initiated | httpServer |         | name           |
+  | component_start_succeeded | httpServer |         | name, duration |
+  | system_start_succeeded    |            |         | name, duration |
 
 ### Scenario: A component with no stop function
 
@@ -152,19 +152,19 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - And the system is stopped
 - Then the recorded events are:
 
-  | event                     | component | reason  | payload      |
-  |---------------------------|-----------|---------|--------------|
-  | system_start_initiated    |           |         | name         |
-  | component_start_initiated | postgres  |         | name         |
-  | component_start_succeeded | postgres  |         | name         |
-  | component_start_initiated | migrate   |         | name         |
-  | component_start_succeeded | migrate   |         | name         |
-  | system_start_succeeded    |           |         | name         |
-  | system_stop_initiated     |           |         | name         |
-  | component_stop_skipped    | migrate   | missing | name, reason |
-  | component_stop_initiated  | postgres  |         | name         |
-  | component_stop_succeeded  | postgres  |         | name         |
-  | system_stop_succeeded     |           |         | name         |
+  | event                     | component | reason  | payload        |
+  |---------------------------|-----------|---------|----------------|
+  | system_start_initiated    |           |         | name           |
+  | component_start_initiated | postgres  |         | name           |
+  | component_start_succeeded | postgres  |         | name, duration |
+  | component_start_initiated | migrate   |         | name           |
+  | component_start_succeeded | migrate   |         | name, duration |
+  | system_start_succeeded    |           |         | name, duration |
+  | system_stop_initiated     |           |         | name           |
+  | component_stop_skipped    | migrate   | missing | name, reason   |
+  | component_stop_initiated  | postgres  |         | name           |
+  | component_stop_succeeded  | postgres  |         | name, duration |
+  | system_stop_succeeded     |           |         | name, duration |
 
 ## Rule: A component already in the state the operation wants is skipped
 
@@ -181,15 +181,15 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - Then postgres has started once
 - And the recorded events are:
 
-  | event                     | component | reason  | payload      |
-  |---------------------------|-----------|---------|--------------|
-  | system_start_initiated    |           |         | name         |
-  | component_start_initiated | postgres  |         | name         |
-  | component_start_succeeded | postgres  |         | name         |
-  | system_start_succeeded    |           |         | name         |
-  | system_start_initiated    |           |         | name         |
-  | component_start_skipped   | postgres  | started | name, reason |
-  | system_start_succeeded    |           |         | name         |
+  | event                     | component | reason  | payload        |
+  |---------------------------|-----------|---------|----------------|
+  | system_start_initiated    |           |         | name           |
+  | component_start_initiated | postgres  |         | name           |
+  | component_start_succeeded | postgres  |         | name, duration |
+  | system_start_succeeded    |           |         | name, duration |
+  | system_start_initiated    |           |         | name           |
+  | component_start_skipped   | postgres  | started | name, reason   |
+  | system_start_succeeded    |           |         | name, duration |
 
 ### Scenario: Stopping a system which has already stopped
 
@@ -202,19 +202,19 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - Then postgres has stopped once
 - And the recorded events are:
 
-  | event                     | component | reason  | payload      |
-  |---------------------------|-----------|---------|--------------|
-  | system_start_initiated    |           |         | name         |
-  | component_start_initiated | postgres  |         | name         |
-  | component_start_succeeded | postgres  |         | name         |
-  | system_start_succeeded    |           |         | name         |
-  | system_stop_initiated     |           |         | name         |
-  | component_stop_initiated  | postgres  |         | name         |
-  | component_stop_succeeded  | postgres  |         | name         |
-  | system_stop_succeeded     |           |         | name         |
-  | system_stop_initiated     |           |         | name         |
-  | component_stop_skipped    | postgres  | stopped | name, reason |
-  | system_stop_succeeded     |           |         | name         |
+  | event                     | component | reason  | payload        |
+  |---------------------------|-----------|---------|----------------|
+  | system_start_initiated    |           |         | name           |
+  | component_start_initiated | postgres  |         | name           |
+  | component_start_succeeded | postgres  |         | name, duration |
+  | system_start_succeeded    |           |         | name, duration |
+  | system_stop_initiated     |           |         | name           |
+  | component_stop_initiated  | postgres  |         | name           |
+  | component_stop_succeeded  | postgres  |         | name, duration |
+  | system_stop_succeeded     |           |         | name, duration |
+  | system_stop_initiated     |           |         | name           |
+  | component_stop_skipped    | postgres  | stopped | name, reason   |
+  | system_stop_succeeded     |           |         | name, duration |
 
 ## Rule: A failure skips the components the operation never reaches
 
@@ -232,20 +232,20 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - And the failed component start event carries emailListener's error
 - And the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | component_start_failed    | emailListener |         | name, error  |
-  | component_start_skipped   | httpServer    | failure | name, reason |
-  | system_start_failed       |               |         | name, error  |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_skipped    | httpServer    | failure | name, reason |
-  | component_stop_skipped    | emailListener | failure | name, reason |
-  | component_stop_skipped    | postgres      | missing | name, reason |
-  | system_stop_succeeded     |               |         | name         |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | component_start_failed    | emailListener |         | name, error, duration |
+  | component_start_skipped   | httpServer    | failure | name, reason          |
+  | system_start_failed       |               |         | name, error, duration |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_skipped    | httpServer    | failure | name, reason          |
+  | component_stop_skipped    | emailListener | failure | name, reason          |
+  | component_stop_skipped    | postgres      | missing | name, reason          |
+  | system_stop_succeeded     |               |         | name, duration        |
 
 ### Scenario: Stopping again after a start which failed
 
@@ -258,26 +258,26 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - When the system is stopped
 - Then the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | component_start_failed    | emailListener |         | name, error  |
-  | component_start_skipped   | httpServer    | failure | name, reason |
-  | system_start_failed       |               |         | name, error  |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_skipped    | httpServer    | failure | name, reason |
-  | component_stop_skipped    | emailListener | failure | name, reason |
-  | component_stop_initiated  | postgres      |         | name         |
-  | component_stop_succeeded  | postgres      |         | name         |
-  | system_stop_succeeded     |               |         | name         |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_skipped    | httpServer    | stopped | name, reason |
-  | component_stop_skipped    | emailListener | stopped | name, reason |
-  | component_stop_skipped    | postgres      | stopped | name, reason |
-  | system_stop_succeeded     |               |         | name         |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | component_start_failed    | emailListener |         | name, error, duration |
+  | component_start_skipped   | httpServer    | failure | name, reason          |
+  | system_start_failed       |               |         | name, error, duration |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_skipped    | httpServer    | failure | name, reason          |
+  | component_stop_skipped    | emailListener | failure | name, reason          |
+  | component_stop_initiated  | postgres      |         | name                  |
+  | component_stop_succeeded  | postgres      |         | name, duration        |
+  | system_stop_succeeded     |               |         | name, duration        |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_skipped    | httpServer    | stopped | name, reason          |
+  | component_stop_skipped    | emailListener | stopped | name, reason          |
+  | component_stop_skipped    | postgres      | stopped | name, reason          |
+  | system_stop_succeeded     |               |         | name, duration        |
 
 ### Scenario: A component with no start function after the one which failed
 
@@ -289,20 +289,20 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - Then the start is rejected with emailListener's error
 - And the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | component_start_failed    | emailListener |         | name, error  |
-  | component_start_skipped   | migrate       | failure | name, reason |
-  | system_start_failed       |               |         | name, error  |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_skipped    | migrate       | failure | name, reason |
-  | component_stop_skipped    | emailListener | failure | name, reason |
-  | component_stop_skipped    | postgres      | missing | name, reason |
-  | system_stop_succeeded     |               |         | name         |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | component_start_failed    | emailListener |         | name, error, duration |
+  | component_start_skipped   | migrate       | failure | name, reason          |
+  | system_start_failed       |               |         | name, error, duration |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_skipped    | migrate       | failure | name, reason          |
+  | component_stop_skipped    | emailListener | failure | name, reason          |
+  | component_stop_skipped    | postgres      | missing | name, reason          |
+  | system_stop_succeeded     |               |         | name, duration        |
 
 ### Scenario: A component fails to stop
 
@@ -316,19 +316,50 @@ and a system nobody is listening to behaves exactly like one somebody is.
 - And the failed component stop event carries emailListener's error
 - And the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | component_start_succeeded | emailListener |         | name         |
-  | system_start_succeeded    |               |         | name         |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_initiated  | emailListener |         | name         |
-  | component_stop_failed     | emailListener |         | name, error  |
-  | component_stop_skipped    | postgres      | failure | name, reason |
-  | system_stop_failed        |               |         | name, error  |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | component_start_succeeded | emailListener |         | name, duration        |
+  | system_start_succeeded    |               |         | name, duration        |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_initiated  | emailListener |         | name                  |
+  | component_stop_failed     | emailListener |         | name, error, duration |
+  | component_stop_skipped    | postgres      | failure | name, reason          |
+  | system_stop_failed        |               |         | name, error, duration |
+
+## Rule: The events which end a start or a stop say how long it took
+
+### Background:
+
+- Given the system's events are recorded
+
+### Scenario: Durations on a start and a stop
+
+- Given the components postgres
+- And each component starts on demand
+- And each component stops on demand
+- When the system starts
+- And postgres has started
+- And the system stops
+- And postgres has stopped
+- Then postgres's succeeded start event carries a duration
+- And postgres's succeeded stop event carries a duration
+- And the succeeded system start event carries a duration no shorter than postgres's
+- And the succeeded system stop event carries a duration no shorter than postgres's
+
+### Scenario: Durations on a failed start and its automatic stop
+
+- Given the components postgres, httpServer
+- And each component starts
+- And each component stops
+- And httpServer fails to start
+- When the system starts
+- Then the start is rejected with httpServer's error
+- And httpServer's failed start event carries a duration
+- And the failed system start event carries a duration no shorter than httpServer's
 
 ## Rule: Events are notifications, never behaviour
 

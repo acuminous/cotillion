@@ -393,15 +393,15 @@ nothing to start or stop, and is the smallest thing cotillion has to get right.
 - And the system has started
 - And the recorded events are:
 
-  | event                  | component | reason  |
-  |------------------------|-----------|---------|
-  | system_stop_initiated  |           |         |
-  | component_stop_skipped | postgres  | stopped |
-  | system_stop_succeeded  |           |         |
-  | system_start_initiated |           |         |
-  | component_start_initiated | postgres |       |
-  | component_start_succeeded | postgres |       |
-  | system_start_succeeded |           |         |
+  | event                     | component | reason  |
+  |---------------------------|-----------|---------|
+  | system_stop_initiated     |           |         |
+  | component_stop_skipped    | postgres  | stopped |
+  | system_stop_succeeded     |           |         |
+  | system_start_initiated    |           |         |
+  | component_start_initiated | postgres  |         |
+  | component_start_succeeded | postgres  |         |
+  | system_start_succeeded    |           |         |
 
 ## Rule: A stop which did not finish can be retried
 

@@ -6,6 +6,11 @@ All notable changes to cotillion are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `duration`, in milliseconds, on the events which end a component's or the system's start or
+  stop, so a logger can say how long each took.
+
 ## [0.1.0] - 2026-09-26
 
 The first release.

@@ -29,6 +29,11 @@ const componentErrorOf = {
   stop: (recorder, name) => recorder.stopError(name),
 };
 
+const succeededEventOf = {
+  component: { start: ComponentEvent.StartSucceeded, stop: ComponentEvent.StopSucceeded },
+  system: { start: SystemEvent.StartSucceeded, stop: SystemEvent.StopSucceeded },
+};
+
 const failedEventOf = {
   component: { start: ComponentEvent.StartFailed, stop: ComponentEvent.StopFailed },
   system: { start: SystemEvent.StartFailed, stop: SystemEvent.StopFailed },
@@ -297,6 +302,30 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
       names.map((name) => componentErrorOf[world.rejectedOperation](recorder, name)),
     );
   })
+  .then("$component's succeeded $lifecycle event carries a duration", ({ world }, name, lifecycle) => {
+    assertDuration(world.eventRecorder.payloadOf(succeededEventOf.component[lifecycle], name).duration);
+  })
+  .then("$component's failed $lifecycle event carries a duration", ({ world }, name, lifecycle) => {
+    assertDuration(world.eventRecorder.payloadOf(failedEventOf.component[lifecycle], name).duration);
+  })
+  .then(
+    "the succeeded system $lifecycle event carries a duration no shorter than $component's",
+    ({ world }, lifecycle, name) => {
+      const system = world.eventRecorder.payloadOf(succeededEventOf.system[lifecycle]).duration;
+      const component = world.eventRecorder.payloadOf(succeededEventOf.component[lifecycle], name).duration;
+      assertDuration(system);
+      ok(system >= component, `the system took ${system}ms but ${name} took ${component}ms`);
+    },
+  )
+  .then(
+    "the failed system $lifecycle event carries a duration no shorter than $component's",
+    ({ world }, lifecycle, name) => {
+      const system = world.eventRecorder.payloadOf(failedEventOf.system[lifecycle]).duration;
+      const component = world.eventRecorder.payloadOf(failedEventOf.component[lifecycle], name).duration;
+      assertDuration(system);
+      ok(system >= component, `the system took ${system}ms but ${name} took ${component}ms`);
+    },
+  )
   .then('the system events name the system $message', ({ world }, name) => {
     deq([...world.eventRecorder.systemNames()], [name]);
   })
@@ -334,6 +363,11 @@ function stopOnProcessEvents(world, events) {
     boundElsewhere = world.unbinders;
   }
   world.unbinders.push(systemOf(world).stopOn(...events));
+}
+
+function assertDuration(duration) {
+  eq(typeof duration, 'number', `the duration was ${duration}`);
+  ok(duration >= 0, `the duration was ${duration}`);
 }
 
 function stopWhen(world, event, name) {

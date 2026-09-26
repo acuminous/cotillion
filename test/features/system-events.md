@@ -23,16 +23,16 @@ error, which is the same object the promise rejects with.
 - And the system is stopped
 - Then the recorded events are:
 
-  | event                     | component | payload |
-  |---------------------------|-----------|---------|
-  | system_start_initiated    |           | name    |
-  | component_start_initiated | postgres  | name    |
-  | component_start_succeeded | postgres  | name    |
-  | system_start_succeeded    |           | name    |
-  | system_stop_initiated     |           | name    |
-  | component_stop_initiated  | postgres  | name    |
-  | component_stop_succeeded  | postgres  | name    |
-  | system_stop_succeeded     |           | name    |
+  | event                     | component | payload        |
+  |---------------------------|-----------|----------------|
+  | system_start_initiated    |           | name           |
+  | component_start_initiated | postgres  | name           |
+  | component_start_succeeded | postgres  | name, duration |
+  | system_start_succeeded    |           | name, duration |
+  | system_stop_initiated     |           | name           |
+  | component_stop_initiated  | postgres  | name           |
+  | component_stop_succeeded  | postgres  | name, duration |
+  | system_stop_succeeded     |           | name, duration |
 
 ### Scenario: A start which fails
 
@@ -45,20 +45,20 @@ error, which is the same object the promise rejects with.
 - And the start was rejected once the system had stopped
 - And the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | component_start_failed    | emailListener |         | name, error  |
-  | component_start_skipped   | httpServer    | failure | name, reason |
-  | system_start_failed       |               |         | name, error  |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_skipped    | httpServer    | failure | name, reason |
-  | component_stop_skipped    | emailListener | failure | name, reason |
-  | component_stop_skipped    | postgres      | missing | name, reason |
-  | system_stop_succeeded     |               |         | name         |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | component_start_failed    | emailListener |         | name, error, duration |
+  | component_start_skipped   | httpServer    | failure | name, reason          |
+  | system_start_failed       |               |         | name, error, duration |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_skipped    | httpServer    | failure | name, reason          |
+  | component_stop_skipped    | emailListener | failure | name, reason          |
+  | component_stop_skipped    | postgres      | missing | name, reason          |
+  | system_stop_succeeded     |               |         | name, duration        |
 
 ### Scenario: A stop which fails
 
@@ -72,19 +72,19 @@ error, which is the same object the promise rejects with.
 - And the failed system stop event carries emailListener's error
 - And the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | component_start_succeeded | emailListener |         | name         |
-  | system_start_succeeded    |               |         | name         |
-  | system_stop_initiated     |               |         | name         |
-  | component_stop_initiated  | emailListener |         | name         |
-  | component_stop_failed     | emailListener |         | name, error  |
-  | component_stop_skipped    | postgres      | failure | name, reason |
-  | system_stop_failed        |               |         | name, error  |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | component_start_succeeded | emailListener |         | name, duration        |
+  | system_start_succeeded    |               |         | name, duration        |
+  | system_stop_initiated     |               |         | name                  |
+  | component_stop_initiated  | emailListener |         | name                  |
+  | component_stop_failed     | emailListener |         | name, error, duration |
+  | component_stop_skipped    | postgres      | failure | name, reason          |
+  | system_stop_failed        |               |         | name, error, duration |
 
 ## Rule: Every system event names the system
 
@@ -183,11 +183,11 @@ error, which is the same object the promise rejects with.
 - When the system is stopped
 - Then the recorded events are:
 
-  | event                  | component | reason  | payload      |
-  |------------------------|-----------|---------|--------------|
-  | system_stop_initiated  |           |         | name         |
-  | component_stop_skipped | postgres  | stopped | name, reason |
-  | system_stop_succeeded  |           |         | name         |
+  | event                  | component | reason  | payload        |
+  |------------------------|-----------|---------|----------------|
+  | system_stop_initiated  |           |         | name           |
+  | component_stop_skipped | postgres  | stopped | name, reason   |
+  | system_stop_succeeded  |           |         | name, duration |
 
 ### Scenario: Starting a system which has already started
 
@@ -198,18 +198,18 @@ error, which is the same object the promise rejects with.
 - Then both starts resolve to the same components
 - And the recorded events are:
 
-  | event                     | component  | reason  | payload      |
-  |---------------------------|------------|---------|--------------|
-  | system_start_initiated    |            |         | name         |
-  | component_start_initiated | postgres   |         | name         |
-  | component_start_succeeded | postgres   |         | name         |
-  | component_start_initiated | httpServer |         | name         |
-  | component_start_succeeded | httpServer |         | name         |
-  | system_start_succeeded    |            |         | name         |
-  | system_start_initiated    |            |         | name         |
-  | component_start_skipped   | postgres   | started | name, reason |
-  | component_start_skipped   | httpServer | started | name, reason |
-  | system_start_succeeded    |            |         | name         |
+  | event                     | component  | reason  | payload        |
+  |---------------------------|------------|---------|----------------|
+  | system_start_initiated    |            |         | name           |
+  | component_start_initiated | postgres   |         | name           |
+  | component_start_succeeded | postgres   |         | name, duration |
+  | component_start_initiated | httpServer |         | name           |
+  | component_start_succeeded | httpServer |         | name, duration |
+  | system_start_succeeded    |            |         | name, duration |
+  | system_start_initiated    |            |         | name           |
+  | component_start_skipped   | postgres   | started | name, reason   |
+  | component_start_skipped   | httpServer | started | name, reason   |
+  | system_start_succeeded    |            |         | name, duration |
 
 ## Rule: A restart announces the stop pair, then the start pair
 

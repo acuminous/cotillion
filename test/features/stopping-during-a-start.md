@@ -39,20 +39,20 @@ failed, but because the caller asked for components and there are none to give.
 - And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
-  | event                     | component     | reason | payload      |
-  |---------------------------|---------------|--------|--------------|
-  | system_start_initiated    |               |        | name         |
-  | component_start_initiated | postgres      |        | name         |
-  | component_start_succeeded | postgres      |        | name         |
-  | component_start_initiated | emailListener |        | name         |
-  | system_stop_initiated     |               |        | name         |
-  | component_start_aborted   | emailListener | abort  | name, reason |
-  | component_start_skipped   | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | emailListener | abort  | name, reason |
-  | component_stop_initiated  | postgres      |        | name         |
-  | component_stop_succeeded  | postgres      |        | name         |
-  | system_stop_succeeded     |               |        | name         |
+  | event                     | component     | reason | payload                |
+  |---------------------------|---------------|--------|------------------------|
+  | system_start_initiated    |               |        | name                   |
+  | component_start_initiated | postgres      |        | name                   |
+  | component_start_succeeded | postgres      |        | name, duration         |
+  | component_start_initiated | emailListener |        | name                   |
+  | system_stop_initiated     |               |        | name                   |
+  | component_start_aborted   | emailListener | abort  | name, reason, duration |
+  | component_start_skipped   | httpServer    | abort  | name, reason           |
+  | component_stop_skipped    | httpServer    | abort  | name, reason           |
+  | component_stop_skipped    | emailListener | abort  | name, reason           |
+  | component_stop_initiated  | postgres      |        | name                   |
+  | component_stop_succeeded  | postgres      |        | name, duration         |
+  | system_stop_succeeded     |               |        | name, duration         |
 
 ### Scenario: An abortable component which rejects with its own error
 
@@ -69,20 +69,20 @@ failed, but because the caller asked for components and there are none to give.
 - And the start was rejected once the system had stopped
 - And the recorded events are:
 
-  | event                     | component     | reason | payload      |
-  |---------------------------|---------------|--------|--------------|
-  | system_start_initiated    |               |        | name         |
-  | component_start_initiated | postgres      |        | name         |
-  | component_start_succeeded | postgres      |        | name         |
-  | component_start_initiated | emailListener |        | name         |
-  | system_stop_initiated     |               |        | name         |
-  | component_start_aborted   | emailListener | abort  | name, reason |
-  | component_start_skipped   | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | emailListener | abort  | name, reason |
-  | component_stop_initiated  | postgres      |        | name         |
-  | component_stop_succeeded  | postgres      |        | name         |
-  | system_stop_succeeded     |               |        | name         |
+  | event                     | component     | reason | payload                |
+  |---------------------------|---------------|--------|------------------------|
+  | system_start_initiated    |               |        | name                   |
+  | component_start_initiated | postgres      |        | name                   |
+  | component_start_succeeded | postgres      |        | name, duration         |
+  | component_start_initiated | emailListener |        | name                   |
+  | system_stop_initiated     |               |        | name                   |
+  | component_start_aborted   | emailListener | abort  | name, reason, duration |
+  | component_start_skipped   | httpServer    | abort  | name, reason           |
+  | component_stop_skipped    | httpServer    | abort  | name, reason           |
+  | component_stop_skipped    | emailListener | abort  | name, reason           |
+  | component_stop_initiated  | postgres      |        | name                   |
+  | component_stop_succeeded  | postgres      |        | name, duration         |
+  | system_stop_succeeded     |               |        | name, duration         |
 
 ### Scenario: An abortable component which completes regardless
 
@@ -99,21 +99,21 @@ failed, but because the caller asked for components and there are none to give.
 - And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
-  | event                     | component     | reason | payload      |
-  |---------------------------|---------------|--------|--------------|
-  | system_start_initiated    |               |        | name         |
-  | component_start_initiated | postgres      |        | name         |
-  | component_start_succeeded | postgres      |        | name         |
-  | component_start_initiated | emailListener |        | name         |
-  | system_stop_initiated     |               |        | name         |
-  | component_start_succeeded | emailListener |        | name         |
-  | component_start_skipped   | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | httpServer    | abort  | name, reason |
-  | component_stop_initiated  | emailListener |        | name         |
-  | component_stop_succeeded  | emailListener |        | name         |
-  | component_stop_initiated  | postgres      |        | name         |
-  | component_stop_succeeded  | postgres      |        | name         |
-  | system_stop_succeeded     |               |        | name         |
+  | event                     | component     | reason | payload        |
+  |---------------------------|---------------|--------|----------------|
+  | system_start_initiated    |               |        | name           |
+  | component_start_initiated | postgres      |        | name           |
+  | component_start_succeeded | postgres      |        | name, duration |
+  | component_start_initiated | emailListener |        | name           |
+  | system_stop_initiated     |               |        | name           |
+  | component_start_succeeded | emailListener |        | name, duration |
+  | component_start_skipped   | httpServer    | abort  | name, reason   |
+  | component_stop_skipped    | httpServer    | abort  | name, reason   |
+  | component_stop_initiated  | emailListener |        | name           |
+  | component_stop_succeeded  | emailListener |        | name, duration |
+  | component_stop_initiated  | postgres      |        | name           |
+  | component_stop_succeeded  | postgres      |        | name, duration |
+  | system_stop_succeeded     |               |        | name, duration |
 
 ### Scenario: A component which cannot be aborted
 
@@ -130,21 +130,21 @@ failed, but because the caller asked for components and there are none to give.
 - And the start is rejected with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
-  | event                     | component     | reason | payload      |
-  |---------------------------|---------------|--------|--------------|
-  | system_start_initiated    |               |        | name         |
-  | component_start_initiated | postgres      |        | name         |
-  | component_start_succeeded | postgres      |        | name         |
-  | component_start_initiated | emailListener |        | name         |
-  | system_stop_initiated     |               |        | name         |
-  | component_start_succeeded | emailListener |        | name         |
-  | component_start_skipped   | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | httpServer    | abort  | name, reason |
-  | component_stop_initiated  | emailListener |        | name         |
-  | component_stop_succeeded  | emailListener |        | name         |
-  | component_stop_initiated  | postgres      |        | name         |
-  | component_stop_succeeded  | postgres      |        | name         |
-  | system_stop_succeeded     |               |        | name         |
+  | event                     | component     | reason | payload        |
+  |---------------------------|---------------|--------|----------------|
+  | system_start_initiated    |               |        | name           |
+  | component_start_initiated | postgres      |        | name           |
+  | component_start_succeeded | postgres      |        | name, duration |
+  | component_start_initiated | emailListener |        | name           |
+  | system_stop_initiated     |               |        | name           |
+  | component_start_succeeded | emailListener |        | name, duration |
+  | component_start_skipped   | httpServer    | abort  | name, reason   |
+  | component_stop_skipped    | httpServer    | abort  | name, reason   |
+  | component_stop_initiated  | emailListener |        | name           |
+  | component_stop_succeeded  | emailListener |        | name, duration |
+  | component_stop_initiated  | postgres      |        | name           |
+  | component_stop_succeeded  | postgres      |        | name, duration |
+  | system_stop_succeeded     |               |        | name, duration |
 
 ### Scenario: Stopping between two components
 
@@ -157,17 +157,17 @@ failed, but because the caller asked for components and there are none to give.
 - And emailListener has not started
 - And the recorded events are:
 
-  | event                     | component     | reason | payload      |
-  |---------------------------|---------------|--------|--------------|
-  | system_start_initiated    |               |        | name         |
-  | component_start_initiated | postgres      |        | name         |
-  | component_start_succeeded | postgres      |        | name         |
-  | system_stop_initiated     |               |        | name         |
-  | component_start_skipped   | emailListener | abort  | name, reason |
-  | component_stop_skipped    | emailListener | abort  | name, reason |
-  | component_stop_initiated  | postgres      |        | name         |
-  | component_stop_succeeded  | postgres      |        | name         |
-  | system_stop_succeeded     |               |        | name         |
+  | event                     | component     | reason | payload        |
+  |---------------------------|---------------|--------|----------------|
+  | system_start_initiated    |               |        | name           |
+  | component_start_initiated | postgres      |        | name           |
+  | component_start_succeeded | postgres      |        | name, duration |
+  | system_stop_initiated     |               |        | name           |
+  | component_start_skipped   | emailListener | abort  | name, reason   |
+  | component_stop_skipped    | emailListener | abort  | name, reason   |
+  | component_stop_initiated  | postgres      |        | name           |
+  | component_stop_succeeded  | postgres      |        | name, duration |
+  | system_stop_succeeded     |               |        | name, duration |
 
 ### Scenario: Stopping as soon as a component's start is initiated
 
@@ -183,20 +183,20 @@ failed, but because the caller asked for components and there are none to give.
 - And emailListener's start was given an abort signal which has fired with an AbortError "The start was aborted while waiting for emailListener to start"
 - And the recorded events are:
 
-  | event                     | component     | reason | payload      |
-  |---------------------------|---------------|--------|--------------|
-  | system_start_initiated    |               |        | name         |
-  | component_start_initiated | postgres      |        | name         |
-  | component_start_succeeded | postgres      |        | name         |
-  | component_start_initiated | emailListener |        | name         |
-  | system_stop_initiated     |               |        | name         |
-  | component_start_aborted   | emailListener | abort  | name, reason |
-  | component_start_skipped   | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | httpServer    | abort  | name, reason |
-  | component_stop_skipped    | emailListener | abort  | name, reason |
-  | component_stop_initiated  | postgres      |        | name         |
-  | component_stop_succeeded  | postgres      |        | name         |
-  | system_stop_succeeded     |               |        | name         |
+  | event                     | component     | reason | payload                |
+  |---------------------------|---------------|--------|------------------------|
+  | system_start_initiated    |               |        | name                   |
+  | component_start_initiated | postgres      |        | name                   |
+  | component_start_succeeded | postgres      |        | name, duration         |
+  | component_start_initiated | emailListener |        | name                   |
+  | system_stop_initiated     |               |        | name                   |
+  | component_start_aborted   | emailListener | abort  | name, reason, duration |
+  | component_start_skipped   | httpServer    | abort  | name, reason           |
+  | component_stop_skipped    | httpServer    | abort  | name, reason           |
+  | component_stop_skipped    | emailListener | abort  | name, reason           |
+  | component_stop_initiated  | postgres      |        | name                   |
+  | component_stop_succeeded  | postgres      |        | name, duration         |
+  | system_stop_succeeded     |               |        | name, duration         |
 
 ## Rule: The stop timeout bounds the wait for the interrupted start
 
@@ -218,16 +218,16 @@ failed, but because the caller asked for components and there are none to give.
 - And postgres has not stopped
 - And the recorded events are:
 
-  | event                     | component     | reason  | payload      |
-  |---------------------------|---------------|---------|--------------|
-  | system_start_initiated    |               |         | name         |
-  | component_start_initiated | postgres      |         | name         |
-  | component_start_succeeded | postgres      |         | name         |
-  | component_start_initiated | emailListener |         | name         |
-  | system_stop_initiated     |               |         | name         |
-  | component_start_failed    | emailListener |         | name, error  |
-  | component_start_skipped   | httpServer    | abort   | name, reason |
-  | component_stop_skipped    | httpServer    | abort   | name, reason |
-  | component_stop_skipped    | emailListener | failure | name, reason |
-  | component_stop_skipped    | postgres      | timeout | name, reason |
-  | system_stop_failed        |               |         | name, error  |
+  | event                     | component     | reason  | payload               |
+  |---------------------------|---------------|---------|-----------------------|
+  | system_start_initiated    |               |         | name                  |
+  | component_start_initiated | postgres      |         | name                  |
+  | component_start_succeeded | postgres      |         | name, duration        |
+  | component_start_initiated | emailListener |         | name                  |
+  | system_stop_initiated     |               |         | name                  |
+  | component_start_failed    | emailListener |         | name, error, duration |
+  | component_start_skipped   | httpServer    | abort   | name, reason          |
+  | component_stop_skipped    | httpServer    | abort   | name, reason          |
+  | component_stop_skipped    | emailListener | failure | name, reason          |
+  | component_stop_skipped    | postgres      | timeout | name, reason          |
+  | system_stop_failed        |               |         | name, error, duration |

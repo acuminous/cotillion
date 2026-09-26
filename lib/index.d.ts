@@ -31,23 +31,23 @@ export type InterruptionReason = 'timeout' | 'abort';
 
 export interface ComponentEventPayloads {
   component_start_initiated: { name: string };
-  component_start_succeeded: { name: string };
-  component_start_failed: { name: string; error: Error };
+  component_start_succeeded: { name: string; duration: number };
+  component_start_failed: { name: string; error: Error; duration: number };
   component_start_skipped: { name: string; reason: SkipReason };
-  component_start_aborted: { name: string; reason: InterruptionReason };
+  component_start_aborted: { name: string; reason: InterruptionReason; duration: number };
   component_stop_initiated: { name: string };
-  component_stop_succeeded: { name: string };
-  component_stop_failed: { name: string; error: Error };
+  component_stop_succeeded: { name: string; duration: number };
+  component_stop_failed: { name: string; error: Error; duration: number };
   component_stop_skipped: { name: string; reason: SkipReason };
 }
 
 export interface SystemEventPayloads {
   system_start_initiated: { name: string | undefined };
-  system_start_succeeded: { name: string | undefined };
-  system_start_failed: { name: string | undefined; error: Error };
+  system_start_succeeded: { name: string | undefined; duration: number };
+  system_start_failed: { name: string | undefined; error: Error; duration: number };
   system_stop_initiated: { name: string | undefined };
-  system_stop_succeeded: { name: string | undefined };
-  system_stop_failed: { name: string | undefined; error: Error };
+  system_stop_succeeded: { name: string | undefined; duration: number };
+  system_stop_failed: { name: string | undefined; error: Error; duration: number };
 }
 
 export type ComponentEventPayload = ComponentEventPayloads[ComponentEventName];

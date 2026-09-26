@@ -51,6 +51,11 @@ function createEventRecorder() {
   }
 
   function payloadOf(event, name) {
+    if (name === undefined)
+      return onlyOne(
+        recorded.filter((entry) => entry.event === event),
+        `${event} events were recorded`,
+      );
     return onlyOne(
       recorded.filter((entry) => entry.event === event && entry.payload?.name === name),
       `${event} events were recorded for ${name}`,
