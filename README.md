@@ -1,4 +1,4 @@
-# cotillion
+# Cotillion
 
 <!--
 [![NPM Version](https://img.shields.io/npm/v/cotillion)](https://www.npmjs.com/package/cotillion)
