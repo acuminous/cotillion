@@ -21,6 +21,12 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('the components $components', ({ world }, definition) => {
     world.definition = definition;
   })
+  .given('the definition is $value', ({ world }, value) => {
+    world.definition = value;
+  })
+  .given('the options are $value', ({ world }, value) => {
+    world.options = value;
+  })
   .given('$component has no name', ({ world }, name) => {
     // biome-ignore lint/performance/noDelete: the scenario needs the key absent, not present and undefined
     delete definitionNamed(world.definition, name).name;

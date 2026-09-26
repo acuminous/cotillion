@@ -51,6 +51,14 @@ and the first violation is the one reported.
 - When the system is created
 - Then the system is accepted
 
+## Rule: The definition is an array
+
+### Scenario: A definition which is not an array
+
+- Given the definition is "postgres"
+- When the system is created
+- Then the system is rejected with "The definition must be an array"
+
 ## Rule: Every entry defines a component
 
 ### Scenario: An entry which is not an object
@@ -144,16 +152,16 @@ and the first violation is the one reported.
 ### Scenario: The [key] timeout is not a positive number
 
 - Given the components postgres
-- And postgres has [article] [key] timeout of -1
+- And postgres has a [key] timeout of -1
 - When the system is created
-- Then the system is rejected with "The component postgres has [article] [key] timeout which is not a positive number"
+- Then the system is rejected with "The component postgres has a [key] timeout which is not a positive number"
 
 ### Examples:
 
-| article | key   |
-|---------|-------|
-| a       | start |
-| a       | stop  |
+| key   |
+|-------|
+| start |
+| stop  |
 
 ### Scenario: A timeout key cotillion does not recognise
 
@@ -206,6 +214,13 @@ and the first violation is the one reported.
 - And the system has a name of 42
 - When the system is created
 - Then the system is rejected with "The system has a name which is not a string"
+
+### Scenario: Options which are not an object
+
+- Given the components postgres
+- And the options are 30000
+- When the system is created
+- Then the system is rejected with "The options must be an object"
 
 ### Scenario: An option cotillion does not recognise
 

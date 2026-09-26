@@ -287,6 +287,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .then('the $operation is rejected with $error $message', async ({ world }, operation, errorType, message) => {
     const error = await rejectionOf(world, operation);
     ok(error instanceof errorType, `the ${operation} was rejected with ${error.constructor.name}: ${error.message}`);
+    eq(error.name, errorType.name);
     eq(error.message, message);
   })
   .then('that error contains the errors of $names', ({ world }, names) => {
