@@ -197,7 +197,7 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | component_stop_failed     | A component's stop rejected                                                                                                                                                                                             | name, error, duration  |
 | component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function             | name, reason           |
 
-Component event listeners receive a single object the above properties.
+Component event listeners receive a single object the above payload.
 
 ### System events
 
@@ -210,7 +210,7 @@ Component event listeners receive a single object the above properties.
 | system_stop_succeeded  | Every started component stopped                                       | name, duration        |
 | system_stop_failed     | The stop rejected, whether failed or timed out                        | name, error, duration |
 
-System event listeners receive a single object. `name` is the system's name from its options, or undefined. The events which end an operation carry `duration` in milliseconds, and the two failed events carry `error`, the error the operation rejected with.
+System event listeners receive a single object the above payload.
 
 The event names are exported as the constants `ComponentEvent` and `SystemEvent`, used throughout this README. The string names in the tables work just as well:
 
