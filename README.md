@@ -185,30 +185,30 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 
 ### Component events
 
-| Event                     | Emitted when                                                                                                                                                            | Payload      |
-|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|
-| component_start_initiated | A component's start has been initiated                                                                                                                                  | name         |
-| component_start_succeeded | A component's start has resolved                                                                                                                                        | name, duration |
-| component_start_failed    | A component's start rejected                                                                                                                                            | name, error, duration |
-| component_start_skipped   | A component's start was never attempted, because it had already started, an earlier component failed, the system was stopped or its start timeout expired while it was starting, or the component has no start function | name, reason |
-| component_start_aborted   | Cotillion aborted the component's start, because the system was stopped or its start timeout expired while the component was starting, and the component gave up when its AbortSignal fired | name, reason, duration |
-| component_stop_initiated  | A component's stop has been initiated                                                                                                                                   | name         |
-| component_stop_succeeded  | A component's stop has resolved                                                                                                                                         | name, duration |
-| component_stop_failed     | A component's stop rejected                                                                                                                                             | name, error, duration |
-| component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function | name, reason |
+| Event                     | Emitted when                                                                                                                                                                                                            | Payload                |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
+| component_start_initiated | A component's start has been initiated                                                                                                                                                                                  | name                   |
+| component_start_succeeded | A component's start has resolved                                                                                                                                                                                        | name, duration         |
+| component_start_failed    | A component's start rejected                                                                                                                                                                                            | name, error, duration  |
+| component_start_skipped   | A component's start was never attempted, because it had already started, an earlier component failed, the system was stopped or its start timeout expired while it was starting, or the component has no start function | name, reason           |
+| component_start_aborted   | Cotillion aborted the component's start, because the system was stopped or its start timeout expired while the component was starting, and the component gave up when its AbortSignal fired                             | name, reason, duration |
+| component_stop_initiated  | A component's stop has been initiated                                                                                                                                                                                   | name                   |
+| component_stop_succeeded  | A component's stop has resolved                                                                                                                                                                                         | name, duration         |
+| component_stop_failed     | A component's stop rejected                                                                                                                                                                                             | name, error, duration  |
+| component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function             | name, reason           |
 
-Component event listeners receive a single object the above properties. `duration` is how long the start or stop took, in milliseconds, on the events which end one.
+Component event listeners receive a single object the above properties.
 
 ### System events
 
-| Event                  | Emitted when                                             | Payload |
-|------------------------|----------------------------------------------------------|---------|
-| system_start_initiated | A start has been initiated                               | name        |
-| system_start_succeeded | Every component started                                  | name, duration |
+| Event                  | Emitted when                                                          | Payload               |
+|------------------------|-----------------------------------------------------------------------|-----------------------|
+| system_start_initiated | A start has been initiated                                            | name                  |
+| system_start_succeeded | Every component started                                               | name, duration        |
 | system_start_failed    | The start rejected, whether a component failed or the start timed out | name, error, duration |
-| system_stop_initiated  | A stop has been initiated                                | name        |
-| system_stop_succeeded  | Every started component stopped                          | name, duration |
-| system_stop_failed     | The stop rejected, whether failed or timed out           | name, error, duration |
+| system_stop_initiated  | A stop has been initiated                                             | name                  |
+| system_stop_succeeded  | Every started component stopped                                       | name, duration        |
+| system_stop_failed     | The stop rejected, whether failed or timed out                        | name, error, duration |
 
 System event listeners receive a single object. `name` is the system's name from its options, or undefined. The events which end an operation carry `duration` in milliseconds, and the two failed events carry `error`, the error the operation rejected with.
 
@@ -319,12 +319,12 @@ If a component in a group fails to start, the rest of the group is allowed to fi
 
 ## Errors
 
-| Error          | Thrown when                                                                                                                      |
-|----------------|----------------------------------------------------------------------------------------------------------------------------------|
-| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn and exitOn given no signals, or one which is not a string. |
-| TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned. |
+| Error          | Thrown when                                                                                                                                                                                                                               |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn and exitOn given no signals, or one which is not a string.               |
+| TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned.                                                                                           |
 | AbortError     | A stop interrupted the start. Thrown by start() once the stop has finished, and carried as the reason of the AbortSignal passed to each abortable component's start function; the message names the components whose start was in flight. |
-| AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                          |
+| AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                                                                                                                                   |
 
 A component's own error passes through unwrapped, so your existing error handling keeps working.
 
