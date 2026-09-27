@@ -29,6 +29,11 @@ system.on(ComponentEvent.StopSucceeded, ({ name, duration }) =>
 system.on(ComponentEvent.StartFailed, ({ name, error }) => console.error(`${name} component failed to start`, error));
 system.on(ComponentEvent.StopFailed, ({ name, error }) => console.error(`${name} component failed to stop`, error));
 
+system.on(ComponentEvent.Failed, ({ name, error }) => {
+  console.error(`${name} component failed`, error);
+  system.restart();
+});
+
 system.exitOn('SIGTERM', 'SIGINT');
 
 const { httpServer: server } = await system.start();

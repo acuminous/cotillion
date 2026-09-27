@@ -1,4 +1,4 @@
-import { type Components, type System, createSystem } from '../../lib/index';
+import { type Components, type StartContext, type System, createSystem } from '../../lib/index';
 
 const postgres = {
   name: 'postgres',
@@ -30,7 +30,7 @@ const inline = createSystem([
   ],
   {
     name: 'httpServer',
-    async start(components: Components, signal: AbortSignal) {
+    async start(components: Components, { signal }: StartContext) {
       return { listening: !signal.aborted, count: Object.keys(components).length };
     },
   },

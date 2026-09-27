@@ -4,6 +4,7 @@ import {
   type ComponentEventPayloads,
   type Components,
   type SkipReason,
+  type StartContext,
   type System,
   SystemEvent,
   TimeoutError,
@@ -23,7 +24,7 @@ const named: System = createSystem([], { name: 'orders', timeouts: 30000 });
 const systemName: string | undefined = named.name;
 const boundedSeparately: System = createSystem([], { timeouts: { start: 30000, stop: 10000 } });
 const abortable: System = createSystem([
-  { name: 'postgres', abortable: true, async start(components: Components, signal: AbortSignal) {} },
+  { name: 'postgres', abortable: true, async start(components: Components, { signal, fail }: StartContext) {} },
 ]);
 
 const timedOut: Error = new TimeoutError('The start timed out after 30000ms waiting for postgres to start');
@@ -72,7 +73,7 @@ const missingAbort: ComponentEventPayloads['component_start_aborted'] = { name: 
 const postgres = {
   name: 'postgres',
   timeouts: { start: 5000, stop: 30000 },
-  async start(components: Components, signal: AbortSignal) {
+  async start(components: Components, { signal }: StartContext) {
     return { connected: !signal.aborted };
   },
   async stop() {},
@@ -113,7 +114,11 @@ const systemAbortTimeout: System = createSystem([], { timeouts: { abort: 1000 } 
 // @ts-expect-error a stop is never interrupted, so it is given nothing
 const stopExpectingASignal: System = createSystem([{ name: 'postgres', async stop(signal: AbortSignal) {} }]);
 
-// @ts-expect-error a start is given the components started so far first, and its abort signal second
+const startTakingASignalSecond = { name: 'postgres', async start(c: Components, signal: AbortSignal) {} };
+// @ts-expect-error a start is given the components started so far first, and its context second
+const startExpectingASignalSecond: System = createSystem([startTakingASignalSecond]);
+
+// @ts-expect-error a start is given the components started so far first, and its context second
 const startExpectingTheSignalFirst: System = createSystem([{ name: 'postgres', async start(signal: AbortSignal) {} }]);
 
 // @ts-expect-error the events are given as arguments, not wrapped in options

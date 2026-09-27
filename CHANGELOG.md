@@ -4,6 +4,19 @@ All notable changes to cotillion are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **Breaking.** A start function's second argument is now an object, `{ signal, fail }`, rather than
+  the AbortSignal itself.
+
+### Added
+
+- `component_failed`: a component which fails after it has started reports it through the `fail`
+  function its start was given, and the application decides what to do. While the system is
+  still starting, the report fails the start instead.
+
 ## [0.1.1]
 
 ### Added

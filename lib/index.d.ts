@@ -10,6 +10,7 @@ export enum ComponentEvent {
   StopSucceeded = 'component_stop_succeeded',
   StopFailed = 'component_stop_failed',
   StopSkipped = 'component_stop_skipped',
+  Failed = 'component_failed',
 }
 
 export enum SystemEvent {
@@ -39,6 +40,7 @@ export interface ComponentEventPayloads {
   component_stop_succeeded: { name: string; duration: number };
   component_stop_failed: { name: string; error: Error; duration: number };
   component_stop_skipped: { name: string; reason: SkipReason };
+  component_failed: { name: string; error: Error };
 }
 
 export interface SystemEventPayloads {
@@ -59,10 +61,15 @@ export interface Timeouts {
 
 export type Components = { [name: string]: unknown };
 
+export interface StartContext {
+  signal: AbortSignal;
+  fail(error: Error): void;
+}
+
 export interface ComponentDefinition {
   name: string;
   abortable?: boolean;
-  start?(components: Components, signal: AbortSignal): unknown;
+  start?(components: Components, context: StartContext): unknown;
   stop?(): unknown;
   timeouts?: number | Timeouts;
   [extra: string]: unknown;

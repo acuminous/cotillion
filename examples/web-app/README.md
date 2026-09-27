@@ -10,3 +10,5 @@ npm run docker:down
 ```
 
 Each start function receives the components which have already started, keyed by name, so the `app` component builds the Hono app from the postgres and redis clients it is given, and `httpServer` serves whatever `app` produced. `src/index.ts` lists them in order: the two clients in parallel, then the app, then the server. `npm start` runs the TypeScript directly with Node's type stripping, so it needs Node 22 or later.
+
+The postgres component wires its client's error event to the `fail` function its start is given, so a broken connection announces `component_failed` and the entrypoint restarts the system. The redis client reconnects on its own, so it does not.

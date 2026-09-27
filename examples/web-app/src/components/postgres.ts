@@ -1,4 +1,4 @@
-import type { ComponentDefinition } from 'cotillion';
+import type { ComponentDefinition, Components, StartContext } from 'cotillion';
 import pg from 'pg';
 
 let client: pg.Client | undefined;
@@ -9,10 +9,11 @@ export const postgres = {
     if (!client) throw new Error('postgres has not started');
     return client;
   },
-  async start() {
+  async start(_components: Components, { fail }: StartContext) {
     client = new pg.Client({
       connectionString: process.env.DATABASE_URL ?? 'postgres://cotillion:cotillion@localhost:15432/cotillion',
     });
+    client.on('error', fail);
     await client.connect();
     return client;
   },

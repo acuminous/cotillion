@@ -49,7 +49,7 @@ function createComponentRecorder() {
   }
 
   function observeSignal(invocation) {
-    const signal = invocation.args.find((arg) => arg instanceof AbortSignal);
+    const signal = invocation.args[1]?.signal;
     if (!(signal instanceof AbortSignal)) return;
     const fired = () => {
       invocation.signal = { fired: true, reason: signal.reason };
@@ -108,8 +108,17 @@ function createComponentRecorder() {
   }
 
   function startSignalOf(invocation) {
-    const [, signal] = invocation.args;
-    return signal;
+    return invocation.args[1].signal;
+  }
+
+  function reportFailure(name) {
+    const invocation = latest(name, 'start');
+    invocation.reported = new Error(`${name} failed`);
+    invocation.args[1].fail(invocation.reported);
+  }
+
+  function reportedError(name) {
+    return latest(name, 'start').reported;
   }
 
   function isStarting(name) {
@@ -191,6 +200,8 @@ function createComponentRecorder() {
     failStart,
     failStop,
     abortStart,
+    reportFailure,
+    reportedError,
     isStarting,
     isStopping,
     startCount,

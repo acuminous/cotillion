@@ -23,6 +23,7 @@ A runnable web app, with postgres, redis and a Hono HTTP server on Docker, lives
 - [System timeouts](#system-timeouts)
 - [Component timeouts](#component-timeouts)
 - [Signals](#signals)
+- [Component failures](#component-failures)
 - [Parallel groups](#parallel-groups)
 - [Errors](#errors)
 - [License](#license)
@@ -71,7 +72,7 @@ Each component lives in its own file, behind the same small shape: a name, a sta
 **components/postgres.ts**
 
 ```ts
-import type { ComponentDefinition } from 'cotillion';
+import type { ComponentDefinition, Components, StartContext } from 'cotillion';
 import pg from 'pg';
 
 let client: pg.Client | undefined;
@@ -82,8 +83,9 @@ export const postgres = {
     if (!client) throw new Error('postgres has not started');
     return client;
   },
-  async start() {
+  async start(_components: Components, { fail }: StartContext) {
     client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    client.on('error', fail);
     await client.connect();
     return client;
   },
@@ -129,13 +131,13 @@ The system's `start()` resolves to the components, keyed by name. Other parts of
 A component is whatever your start function produces: a connected client, a subscribed listener, a listening server. You give cotillion a definition of each one, which is a plain object:
 
 ```ts
-import type { Components } from 'cotillion';
+import type { Components, StartContext } from 'cotillion';
 
 const emailListener = {
   name: 'email-listener',
   abortable: true,
   timeouts: { start: 5000, stop: 30000 },
-  async start(components: Components, signal: AbortSignal) {
+  async start(components: Components, { signal, fail }: StartContext) {
     // acquire connections, subscribe, listen
   },
   async stop() {
@@ -145,7 +147,7 @@ const emailListener = {
 ```
 
 - `name` is required and must be unique. It is the component's key in the components object, and identifies the component in events and error messages.
-- `start` is optional. It is called with two arguments: an object holding the components which have already started, keyed by name, and an [AbortSignal](https://nodejs.org/api/globals.html#class-abortsignal) which fires if cotillion needs the start to give up, because the system is being stopped or a timeout has expired. Whatever it returns is the component. Without a start function the component is `undefined`.
+- `start` is optional. It is called with two arguments: an object holding the components which have already started, keyed by name, and an object with two things for the component to use. `signal` is an [AbortSignal](https://nodejs.org/api/globals.html#class-abortsignal) which fires if cotillion needs the start to give up, because the system is being stopped or a timeout has expired. `fail` is a function to call, with the error, if the component fails after it has started; see [Component failures](#component-failures). Whatever it returns is the component. Without a start function the component is `undefined`.
 - `stop` is optional. It is called with no arguments.
 - `abortable` is optional and defaults to false. Set it to true only if the start function watches its AbortSignal and gives up promptly when it fires. See [Stopping during a start](#signals).
 - `timeouts` is optional. It limits how long this component's own start and stop may take, in milliseconds: a number for both, or an object with `start` and `stop` keys. See [Component timeouts](#component-timeouts).
@@ -196,6 +198,7 @@ A system is an [EventEmitter](https://nodejs.org/api/events.html#class-eventemit
 | component_stop_succeeded  | A component's stop has resolved                                                                                                                                                                                         | name, duration         |
 | component_stop_failed     | A component's stop rejected                                                                                                                                                                                             | name, error, duration  |
 | component_stop_skipped    | A component's stop was never attempted, because it is not started, an earlier start failed or was aborted, another component's stop failed, the stop timeout expired, or the component has no stop function             | name, reason           |
+| component_failed          | The component reported a failure after it had started, by calling the fail function its start was given                                                                                                                 | name, error            |
 
 Component event listeners receive a single object the above payload.
 
@@ -292,6 +295,25 @@ system.on(SystemEvent.StopFailed, () => process.exit(1));
 ```
 
 The first line matters. When a start fails, cotillion stops the system, and that stop usually succeeds; without the first line the process would exit with code 0 after a failed start. These three listeners are exactly what `exitOn` adds.
+
+## Component failures
+
+A component can fail after it has started: a database client emits an error, a subscription drops. Its start function is given `fail` for this, and wires it to whatever it wraps:
+
+```ts
+client.on('error', fail);
+```
+
+Once the system has started, a call to `fail(error)` announces `component_failed` with the name and the error, and nothing more. The application decides what to do: `system.restart()` is the usual answer, `system.stop()` another, and carrying on a third.
+
+```ts
+system.on(ComponentEvent.Failed, ({ name, error }) => {
+  console.error(`${name} failed`, error);
+  system.restart();
+});
+```
+
+While the system is still starting, `fail` fails the start instead, exactly as if the component's start had rejected, so `start()` never resolves to a system with a component already known to be broken. A component which can recover on its own, such as a connection pool or a reconnecting client, should do so and not call `fail`. If it recovers by replacing what it created, hand out a stable object such as the `component` getter in the quick start, since the components object holds whatever the start returned.
 
 ## Parallel groups
 

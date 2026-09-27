@@ -1,7 +1,8 @@
-import type { ComponentDefinition } from '../../lib/index';
+import type { ComponentDefinition, Components, StartContext } from '../../lib/index';
 import { ComponentEvent, createSystem } from '../../lib/index';
 
 interface Client {
+  on(event: 'error', listener: (error: Error) => void): void;
   connect(): Promise<void>;
   end(): Promise<void>;
   query(sql: string): Promise<unknown>;
@@ -22,8 +23,9 @@ export const postgres = {
     if (!client) throw new Error('postgres has not started');
     return client;
   },
-  async start() {
+  async start(_components: Components, { fail }: StartContext) {
     client = connectClient();
+    client.on('error', fail);
     await client.connect();
     return client;
   },

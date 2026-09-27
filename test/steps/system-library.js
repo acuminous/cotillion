@@ -135,6 +135,11 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('$component is abortable', ({ world }, name) => {
     definitionNamed(world.definition, name).abortable = true;
   })
+  .given('the system restarts when $component fails', ({ world }, name) => {
+    systemOf(world).on(ComponentEvent.Failed, (payload) => {
+      if (payload.name === name) trackStart(world, systemOf(world).restart());
+    });
+  })
   .given('the system is stopped as soon as $component has started', ({ world }, name) => {
     stopWhen(world, ComponentEvent.StartSucceeded, name);
   })
@@ -189,6 +194,10 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     componentRecorderOf(world).failStop(name);
     await setImmediate();
   })
+  .when('$component reports a failure', async ({ world }, name) => {
+    componentRecorderOf(world).reportFailure(name);
+    await setImmediate();
+  })
   .when('$component has aborted', async ({ world }, name) => {
     componentRecorderOf(world).abortStart(name);
     await setImmediate();
@@ -218,12 +227,12 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     eq(componentRecorderOf(world).stopCount(name), count);
   })
   .then("$component's start was given an abort signal which has not fired", ({ world }, name) => {
-    const [, signal] = componentRecorderOf(world).startArguments(name);
+    const [, { signal }] = componentRecorderOf(world).startArguments(name);
     ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
     eq(componentRecorderOf(world).startSignal(name).fired, false, `${name}'s start signal fired`);
   })
   .then("$component's start was given an abort signal which has fired with that error", ({ world }, name) => {
-    const [, signal] = componentRecorderOf(world).startArguments(name);
+    const [, { signal }] = componentRecorderOf(world).startArguments(name);
     ok(signal instanceof AbortSignal, `${name} was not given an abort signal`);
     const { fired, reason } = componentRecorderOf(world).startSignal(name);
     ok(fired, `${name}'s start signal did not fire`);
@@ -238,6 +247,14 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
       eq(reason.message, message);
     },
   )
+  .then("$component's failed event carries the reported error", ({ world }, name) => {
+    const recorder = componentRecorderOf(world);
+    eq(world.eventRecorder.payloadOf(ComponentEvent.Failed, name).error, recorder.reportedError(name));
+  })
+  .then("the start is rejected with $component's reported error", async ({ world }, name) => {
+    const error = await rejectionOf(world, 'start');
+    eq(error, componentRecorderOf(world).reportedError(name));
+  })
   .then("$component's start was given no components", ({ world }, name) => {
     deq(componentRecorderOf(world).startComponents(name), {});
   })
