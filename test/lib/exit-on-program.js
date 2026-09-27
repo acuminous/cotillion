@@ -1,10 +1,13 @@
-const { SystemEvent, createSystem } = require('../../lib');
+const { ComponentEvent, SystemEvent, createSystem } = require('../../lib');
 
 const [behaviour] = process.argv.slice(2);
 
+let reportFailure;
+
 const postgres = {
   name: 'postgres',
-  async start() {
+  async start(components, { fail }) {
+    reportFailure = fail;
     if (behaviour === 'start-fails') throw new Error('connection refused');
     return 'a connection';
   },
@@ -15,13 +18,25 @@ const postgres = {
 
 const system = createSystem([postgres]);
 
-for (const event of Object.values(SystemEvent)) system.on(event, () => console.log(event));
+for (const event of [...Object.values(SystemEvent), ...Object.values(ComponentEvent)])
+  system.on(event, () => console.log(event));
 
 const unbind = system.exitOn('shutdown');
 
 if (behaviour === 'unbound') unbind();
 
-system.start().then(stopAndSurvive, ignore);
+const afterStart = {
+  clean: signal,
+  'stop-fails': signal,
+  unbound: stopAndSurvive,
+  'component-fails': failThenRestart,
+};
+
+system.start().then(afterStart[behaviour]);
+
+function signal() {
+  process.emit('shutdown');
+}
 
 async function stopAndSurvive() {
   process.emit('shutdown');
@@ -29,4 +44,13 @@ async function stopAndSurvive() {
   process.exitCode = 7;
 }
 
-function ignore() {}
+function failThenRestart() {
+  system.on(ComponentEvent.Failed, restartThenSignal);
+  reportFailure(new Error('connection lost'));
+}
+
+async function restartThenSignal() {
+  await system.restart();
+  process.exitCode = 3;
+  process.emit('shutdown');
+}

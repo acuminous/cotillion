@@ -4,12 +4,15 @@ All notable changes to cotillion are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0]
 
 ### Changed
 
 - **Breaking.** A start function's second argument is now an object, `{ signal, fail }`, rather than
   the AbortSignal itself.
+- **Breaking.** `exitOn` exits only once a stop begun by one of its signals has finished. Stops the
+  application begins itself, by `stop()` or `restart()`, no longer exit the process, and a failed
+  start is left to reject `start()`.
 
 ### Added
 

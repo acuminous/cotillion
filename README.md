@@ -269,24 +269,15 @@ A component which exceeds its own limit is treated as a failure. Its failed even
 
 ## Signals
 
-`system.exitOn(...signals)` stops the system when the process receives any of the named signals, and ends the process once the stop has finished:
+`system.exitOn(...signals)` stops the system when the process receives any of the named signals, and exits once that stop has finished: with code 0 if it succeeded, 1 if it failed.
 
 ```ts
 system.exitOn('SIGTERM', 'SIGINT');
 ```
 
-The exit code is 0 after a successful stop, and 1 after a failed stop or after a stop which followed a failed start. It exits on any stop, including one you call yourself or a `restart()`. Call it before `start()`, so that a signal arriving during startup interrupts the start; `start()` then rejects only once the stop has finished, by which time the process has exited, so log start failures from the event listeners rather than from a catch block. `exitOn` returns a function which removes its listeners.
+Call it before `start()`, so that a signal arriving during startup interrupts the start; the process exits once the stop has finished. Stops you begin yourself, with `stop()` or `restart()`, do not exit. A start which fails rejects `start()`, and left unhandled at the top level Node exits with code 1 and the error, which is what the quick start does. `exitOn` returns a function which removes its listeners.
 
-`system.stopOn(...signals)` does the same without exiting, for when you want to decide how the process ends yourself. 
-
-```ts
-system.stopOn('SIGTERM', 'SIGINT');
-```
-
-
-Use one or the other for a given signal. Any process event will do as a signal; further signals during the stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system.
-
-Cotillion calls `process.exit` only from `exitOn`. With `stopOn`, exit from your own listeners:
+`system.stopOn(...signals)` stops the system on the signals without exiting, for when you want to decide how the process ends yourself, for example from the system events:
 
 ```ts
 system.on(SystemEvent.StartFailed, () => { process.exitCode = 1; });
@@ -294,17 +285,17 @@ system.on(SystemEvent.StopSucceeded, () => process.exit());
 system.on(SystemEvent.StopFailed, () => process.exit(1));
 ```
 
-The first line matters. When a start fails, cotillion stops the system, and that stop usually succeeds; without the first line the process would exit with code 0 after a failed start. These three listeners are exactly what `exitOn` adds.
+The first line matters: a failed start is followed by a stop, which usually succeeds. Any process event will do as a signal; further signals during a stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system. Cotillion calls `process.exit` only from `exitOn`.
 
 ## Component failures
 
-A component can fail after it has started: a database client emits an error, a subscription drops. Its start function is given `fail` for this, and wires it to whatever it wraps:
+A component can fail after it has started: a database client loses its connection, a subscription drops. Its start function is given `fail` for this, and wires it to whatever it wraps:
 
 ```ts
 client.on('error', fail);
 ```
 
-Once the system has started, a call to `fail(error)` announces `component_failed` with the name and the error, and nothing more. The application decides what to do: `system.restart()` is the usual answer, `system.stop()` another, and carrying on a third.
+A call to `fail(error)` announces `component_failed` with the name and the error. Cotillion does nothing else: the application decides, and `system.restart()` is the usual answer.
 
 ```ts
 system.on(ComponentEvent.Failed, ({ name, error }) => {
@@ -313,7 +304,7 @@ system.on(ComponentEvent.Failed, ({ name, error }) => {
 });
 ```
 
-While the system is still starting, `fail` fails the start instead, exactly as if the component's start had rejected, so `start()` never resolves to a system with a component already known to be broken. A component which can recover on its own, such as a connection pool or a reconnecting client, should do so and not call `fail`. If it recovers by replacing what it created, hand out a stable object such as the `component` getter in the quick start, since the components object holds whatever the start returned.
+A report which arrives while the system is still starting fails the start instead, as if the component's start had rejected. A component which recovers on its own, such as a connection pool or a reconnecting client, should do so and not call `fail`.
 
 ## Parallel groups
 

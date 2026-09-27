@@ -38,7 +38,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     const callers = librarySources().filter((source) => source.text.includes('process.exit'));
     deq(
       callers.map((source) => source.file),
-      ['exit-listeners.js'],
+      ['exit.js'],
     );
   });
 

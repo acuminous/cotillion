@@ -26,6 +26,9 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given("the program's postgres fails to stop", ({ world }) => {
     world.behaviour = 'stop-fails';
   })
+  .given("the program's postgres fails after starting, and the program restarts the system", ({ world }) => {
+    world.behaviour = 'component-fails';
+  })
   .given('the program unbinds the exit before stopping', ({ world }) => {
     world.behaviour = 'unbound';
   })
