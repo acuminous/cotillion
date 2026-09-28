@@ -16,6 +16,8 @@ const system: System = createSystem([]);
 const components: Promise<Components> = system.start();
 const stopped: Promise<void> = system.stop();
 const restarted: Promise<Components> = system.restart();
+const exited: Promise<never> = system.exit(1);
+const exitedQuietly: Promise<never> = system.exit();
 const unbind: () => void = system.stopOn('SIGTERM', 'SIGINT');
 const unbindExit: () => void = system.exitOn('SIGTERM', 'SIGINT');
 
@@ -123,6 +125,9 @@ const startExpectingTheSignalFirst: System = createSystem([{ name: 'postgres', a
 
 // @ts-expect-error the events are given as arguments, not wrapped in options
 system.stopOn({ events: ['SIGTERM'] });
+
+// @ts-expect-error the exit code is a number, not a signal
+system.exit('SIGTERM');
 
 // @ts-expect-error abortable is a flag, not a description
 const abortableWhichIsNotABoolean: System = createSystem([{ name: 'postgres', abortable: 'yes' }]);

@@ -34,7 +34,7 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
     deq(packageJson().dependencies, undefined);
     deq(packageJson().peerDependencies, undefined);
   })
-  .then('the library calls process.exit only where exitOn is implemented', () => {
+  .then('the library calls process.exit only where exit is implemented', () => {
     const callers = librarySources().filter((source) => source.text.includes('process.exit'));
     deq(
       callers.map((source) => source.file),

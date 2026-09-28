@@ -38,7 +38,7 @@ package, and about who calls process.exit, must match the code.
 - Given the README
 - Then the package has no production dependencies
 
-### Scenario: Cotillion calls process.exit only from exitOn
+### Scenario: Cotillion calls process.exit only from exit and exitOn
 
 - Given the README
-- Then the library calls process.exit only where exitOn is implemented
+- Then the library calls process.exit only where exit is implemented
