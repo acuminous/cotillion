@@ -102,6 +102,7 @@ export interface System<C = Components> extends EventEmitter<SystemEvents> {
   start(): Promise<C>;
   stop(): Promise<void>;
   restart(): Promise<C>;
+  exit(code?: number): Promise<never>;
   stopOn(...signals: string[]): () => void;
   exitOn(...signals: string[]): () => void;
 }

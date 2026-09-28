@@ -3,6 +3,8 @@ const { execFile } = require('node:child_process');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const Yadda = require('yadda');
+const { createSystem } = require('../../lib');
+const { parseValue } = require('../lib/definition-notation');
 
 const {
   Dictionary,
@@ -12,30 +14,51 @@ const {
 
 const run = promisify(execFile);
 
-const program = path.join(__dirname, '..', 'lib', 'exit-on-program.js');
+const program = path.join(__dirname, '..', 'lib', 'exiting-program.js');
 
-const dictionary = new Dictionary().define('code', /(\d+)/, async (digits) => Number(digits)).define('event', /(\w+)/);
+const dictionary = new Dictionary()
+  .define('code', /(\d+)/, async (digits) => Number(digits))
+  .define('codeDescription', /(no code|the code \d+)/, async (phrase) => phrase.replace(/\D/g, '') || 'none')
+  .define('event', /(\w+)/)
+  .define('value', /(-?\d+(?:\.\d+)?|"[^"]*"|true|false)/, async (token) => parseValue(token))
+  .define('message', /"([^"]+)"/);
 
 module.exports = English.localise(new ContextParamLibrary(dictionary))
   .given('a program whose system exits on a process event', ({ world }) => {
-    world.behaviour = 'clean';
+    world.program = { behaviour: 'signal', failure: 'none', code: 'none' };
+  })
+  .given('a program whose system exits on a termination signal', ({ world }) => {
+    world.program = { behaviour: 'terminate', failure: 'none', code: 'none' };
+  })
+  .given('a program whose system exits itself with $codeDescription', ({ world }, code) => {
+    world.program = { behaviour: 'exit', failure: 'none', code };
+  })
+  .given('a program whose system exits itself with $codeDescription while starting', ({ world }, code) => {
+    world.program = { behaviour: 'exit-while-starting', failure: 'none', code };
+  })
+  .given('the program sets process.exitCode to 5 before exiting', ({ world }) => {
+    world.program.behaviour = 'exit-after-setting-exit-code';
   })
   .given("the program's postgres fails to start", ({ world }) => {
-    world.behaviour = 'start-fails';
+    world.program.failure = 'start-fails';
   })
   .given("the program's postgres fails to stop", ({ world }) => {
-    world.behaviour = 'stop-fails';
+    world.program.failure = 'stop-fails';
   })
   .given("the program's postgres fails after starting, and the program restarts the system", ({ world }) => {
-    world.behaviour = 'component-fails';
+    world.program.behaviour = 'component-fails';
   })
   .given('the program unbinds the exit before stopping', ({ world }) => {
-    world.behaviour = 'unbound';
+    world.program.behaviour = 'unbound';
   })
   .when('the program runs', async ({ world }) => {
-    world.exit = await run(process.execPath, [program, world.behaviour]).then(exited(0), (error) =>
+    const { behaviour, failure, code } = world.program;
+    world.exit = await run(process.execPath, [program, behaviour, failure, code]).then(exited(0), (error) =>
       exited(error.code)(error),
     );
+  })
+  .when('the system is asked to exit with the code $value', ({ world }, code) => {
+    world.error = errorFrom(() => createSystem(world.definition).exit(code));
   })
   .then('the program exits with code $code', ({ world }, code) => {
     eq(world.exit.code, code, `the program printed:\n${world.exit.stdout}${world.exit.stderr}`);
@@ -46,4 +69,12 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
 
 function exited(code) {
   return ({ stdout, stderr }) => ({ code, stdout, stderr });
+}
+
+function errorFrom(fn) {
+  try {
+    fn();
+  } catch (error) {
+    return error;
+  }
 }

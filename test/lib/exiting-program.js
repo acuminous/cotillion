@@ -1,18 +1,23 @@
 const { ComponentEvent, SystemEvent, createSystem } = require('../../lib');
 
-const [behaviour] = process.argv.slice(2);
+const [behaviour, failure, code] = process.argv.slice(2);
+
+const exitCode = code === 'none' ? undefined : Number(code);
 
 let reportFailure;
+let connection;
 
 const postgres = {
   name: 'postgres',
   async start(components, { fail }) {
     reportFailure = fail;
-    if (behaviour === 'start-fails') throw new Error('connection refused');
-    return 'a connection';
+    if (failure === 'start-fails') throw new Error('connection refused');
+    connection = setInterval(() => {}, 1000);
+    return connection;
   },
   async stop() {
-    if (behaviour === 'stop-fails') throw new Error('could not disconnect');
+    clearInterval(connection);
+    if (failure === 'stop-fails') throw new Error('could not disconnect');
   },
 };
 
@@ -21,21 +26,44 @@ const system = createSystem([postgres]);
 for (const event of [...Object.values(SystemEvent), ...Object.values(ComponentEvent)])
   system.on(event, () => console.log(event));
 
-const unbind = system.exitOn('shutdown');
+const unbind = system.exitOn('shutdown', 'SIGTERM');
 
 if (behaviour === 'unbound') unbind();
 
-const afterStart = {
-  clean: signal,
-  'stop-fails': signal,
-  unbound: stopAndSurvive,
-  'component-fails': failThenRestart,
+const whileStarting = {
+  'exit-while-starting': exit,
 };
 
-system.start().then(afterStart[behaviour]);
+const afterStart = {
+  signal,
+  terminate,
+  unbound: stopAndSurvive,
+  'component-fails': failThenRestart,
+  exit,
+  'exit-after-setting-exit-code': setExitCodeThenExit,
+};
+
+const starting = system.start();
+
+whileStarting[behaviour]?.();
+
+starting.then(afterStart[behaviour]);
 
 function signal() {
   process.emit('shutdown');
+}
+
+function terminate() {
+  process.kill(process.pid, 'SIGTERM');
+}
+
+function exit() {
+  system.exit(exitCode);
+}
+
+function setExitCodeThenExit() {
+  process.exitCode = 5;
+  system.exit();
 }
 
 async function stopAndSurvive() {

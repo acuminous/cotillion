@@ -22,6 +22,7 @@ A runnable web app, with postgres, redis and a Hono HTTP server on Docker, lives
 - [Events](#events)
 - [System timeouts](#system-timeouts)
 - [Component timeouts](#component-timeouts)
+- [Exiting](#exiting)
 - [Signals](#signals)
 - [Component failures](#component-failures)
 - [Parallel groups](#parallel-groups)
@@ -267,9 +268,17 @@ A number applies to all timeouts; the object form sets them separately. There ar
 
 A component which exceeds its own limit is treated as a failure. Its failed event carries a `TimeoutError` such as "The component emailListener timed out after 5000ms while starting", the operation continues as after any failure, and the function is left running. If the component is abortable, the AbortSignal passed to its start function fires as well, so the function can give up.
 
+## Exiting
+
+`system.exit(code)` stops the system and exits the process once the stop has finished: with the given code if the stop succeeded, or with 1 if it failed, unless you gave a code other than 0, which is kept. The code you gave is your reason for exiting, and the stop's failure is announced through the events. With no code the process exits with `process.exitCode`, which is 0 unless you set it.
+
+```ts
+system.exit(1);
+```
+
 ## Signals
 
-`system.exitOn(...signals)` stops the system when the process receives any of the named signals, and exits once that stop has finished: with code 0 if it succeeded, 1 if it failed.
+`system.exitOn(...signals)` calls `exit()` when the process receives any of the named signals, so the system stops and the process exits with code 0 if the stop succeeded and 1 if it failed.
 
 ```ts
 system.exitOn('SIGTERM', 'SIGINT');
@@ -285,7 +294,7 @@ system.on(SystemEvent.StopSucceeded, () => process.exit());
 system.on(SystemEvent.StopFailed, () => process.exit(1));
 ```
 
-The first line matters: a failed start is followed by a stop, which usually succeeds. Any process event will do as a signal; further signals during a stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system. Cotillion calls `process.exit` only from `exitOn`.
+The first line matters: a failed start is followed by a stop, which usually succeeds. Any process event will do as a signal; further signals during a stop do nothing more; and the listeners stay for the life of the process, so a signal after a `restart()` stops the restarted system. Cotillion calls `process.exit` only from `exit` and `exitOn`.
 
 ## Component failures
 
@@ -295,7 +304,7 @@ A component can fail after it has started: a database client loses its connectio
 client.on('error', fail);
 ```
 
-A call to `fail(error)` announces `component_failed` with the name and the error. Cotillion does nothing else: the application decides, and `system.restart()` is the usual answer.
+A call to `fail(error)` announces `component_failed` with the name and the error. Cotillion does nothing else: the application decides. `system.restart()` is the usual answer, and `system.exit(1)` gives up.
 
 ```ts
 system.on(ComponentEvent.Failed, ({ name, error }) => {
@@ -341,7 +350,7 @@ If a component in a group fails to start, the rest of the group is allowed to fi
 
 | Error          | Thrown when                                                                                                                                                                                                                               |
 |----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn and exitOn given no signals, or one which is not a string.               |
+| Error          | The definition or the options are invalid: a missing or duplicate name, a malformed entry, or a malformed timeout. Thrown by createSystem. Also thrown by stopOn and exitOn given no signals, or one which is not a string, and by exit given a code which is not an integer. |
 | TimeoutError   | The system's start or stop timeout expired, or a component exceeded its own timeout. The message names the component, or components, concerned.                                                                                           |
 | AbortError     | A stop interrupted the start. Thrown by start() once the stop has finished, and carried as the reason of the AbortSignal passed to each abortable component's start function; the message names the components whose start was in flight. |
 | AggregateError | More than one entry of a parallel group failed. Contains every failure.                                                                                                                                                                   |

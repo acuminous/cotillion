@@ -4,6 +4,13 @@ All notable changes to cotillion are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `exit(code)`: stops the system and exits the process with the code once the stop has finished.
+  A failed stop exits with 1 unless the code given was non-zero, which is kept.
+
 ## [0.2.0]
 
 ### Changed
