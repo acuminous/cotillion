@@ -4,6 +4,14 @@ All notable changes to cotillion are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `exit()` on a system with nothing to stop, because it never started, has already stopped, or its
+  start failed, no longer announces an empty stop before exiting. Exiting from the rejection of a
+  failed `start()` now reports the one stop the failure caused, rather than two.
+
 ## [0.2.1]
 
 ### Added

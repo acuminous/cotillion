@@ -7,7 +7,9 @@ lost. With no code the process exits with process.exitCode, which is 0 unless th
 system.exitOn(...signals) does what stopOn does and calls exit() with no code when a signal arrives. Stops the application begins itself, by stop() or restart(), do not exit, so an
 application can restart its system when a component fails and keep running. A failed start is not
 exitOn's business either: start() rejects, and left unhandled at the top level Node ends the process
-with code 1, as these programs let it. An exit code can only be seen from outside the process, so
+with code 1, as these programs let it. A system with nothing to stop, because it never started, has
+stopped, or its start failed and the stop which follows has finished, is not stopped again: exit()
+ends the process without announcing a stop. An exit code can only be seen from outside the process, so
 these scenarios run a small program in a child process and read the code it exited with.
 
 ## Rule: A signal stops the system and then exits the process
@@ -94,6 +96,77 @@ these scenarios run a small program in a child process and read the code it exit
 - When the program runs
 - Then the program exits with code 3
 - And the program announced system_stop_succeeded before exiting
+
+## Rule: An exit with nothing to stop does not stop again
+
+### Scenario: An exit from the rejection of a failed start
+
+- Given a program whose system exits itself with the code 1 when the start fails
+- And the program's postgres fails to start
+- When the program runs
+- Then the program exits with code 1
+- And before exiting the program announced:
+
+  | event                     |
+  |---------------------------|
+  | system_start_initiated    |
+  | component_start_initiated |
+  | component_start_failed    |
+  | system_start_failed       |
+  | system_stop_initiated     |
+  | component_stop_skipped    |
+  | system_stop_succeeded     |
+
+### Scenario: An exit after the system has stopped
+
+- Given a program whose system exits itself with the code 3 after stopping
+- When the program runs
+- Then the program exits with code 3
+- And before exiting the program announced:
+
+  | event                     |
+  |---------------------------|
+  | system_start_initiated    |
+  | component_start_initiated |
+  | component_start_succeeded |
+  | system_start_succeeded    |
+  | system_stop_initiated     |
+  | component_stop_initiated  |
+  | component_stop_succeeded  |
+  | system_stop_succeeded     |
+
+### Scenario: An exit of a system which was never started
+
+- Given a program whose system exits itself with the code 3 without starting
+- When the program runs
+- Then the program exits with code 3
+- And before exiting the program announced:
+
+  | event |
+  |-------|
+
+### Scenario: An exit after a stop which failed stops again
+
+- Given a program whose system exits itself with the code 3 after stopping
+- And the program's postgres fails to stop
+- When the program runs
+- Then the program exits with code 3
+- And before exiting the program announced:
+
+  | event                     |
+  |---------------------------|
+  | system_start_initiated    |
+  | component_start_initiated |
+  | component_start_succeeded |
+  | system_start_succeeded    |
+  | system_stop_initiated     |
+  | component_stop_initiated  |
+  | component_stop_failed     |
+  | system_stop_failed        |
+  | system_stop_initiated     |
+  | component_stop_initiated  |
+  | component_stop_failed     |
+  | system_stop_failed        |
 
 ## Rule: A failed stop exits with the caller's non-zero code, or 1
 
