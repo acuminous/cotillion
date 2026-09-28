@@ -1,10 +1,11 @@
-const { equal: eq, ok } = require('node:assert/strict');
+const { deepEqual: deq, equal: eq, ok } = require('node:assert/strict');
 const { execFile } = require('node:child_process');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const Yadda = require('yadda');
 const { createSystem } = require('../../lib');
 const { parseValue } = require('../lib/definition-notation');
+const { parseStepDataTable } = require('../lib/step-data-table');
 
 const {
   Dictionary,
@@ -20,6 +21,7 @@ const dictionary = new Dictionary()
   .define('code', /(\d+)/, async (digits) => Number(digits))
   .define('codeDescription', /(no code|the code \d+)/, async (phrase) => phrase.replace(/\D/g, '') || 'none')
   .define('event', /(\w+)/)
+  .define('events', /([\s\S]+)/, async (text) => parseStepDataTable(text))
   .define('value', /(-?\d+(?:\.\d+)?|"[^"]*"|true|false)/, async (token) => parseValue(token))
   .define('message', /"([^"]+)"/);
 
@@ -35,6 +37,15 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .given('a program whose system exits itself with $codeDescription while starting', ({ world }, code) => {
     world.program = { behaviour: 'exit-while-starting', failure: 'none', code };
+  })
+  .given('a program whose system exits itself with $codeDescription when the start fails', ({ world }, code) => {
+    world.program = { behaviour: 'exit-when-start-fails', failure: 'none', code };
+  })
+  .given('a program whose system exits itself with $codeDescription after stopping', ({ world }, code) => {
+    world.program = { behaviour: 'exit-after-stopping', failure: 'none', code };
+  })
+  .given('a program whose system exits itself with $codeDescription without starting', ({ world }, code) => {
+    world.program = { behaviour: 'exit-without-starting', failure: 'none', code };
   })
   .given('the program sets process.exitCode to 5 before exiting', ({ world }) => {
     world.program.behaviour = 'exit-after-setting-exit-code';
@@ -65,7 +76,17 @@ module.exports = English.localise(new ContextParamLibrary(dictionary))
   })
   .then('the program announced $event before exiting', ({ world }, event) => {
     ok(world.exit.stdout.split('\n').includes(event), `the program announced:\n${world.exit.stdout}`);
+  })
+  .then('before exiting the program announced:\n$events', ({ world }, expected) => {
+    deq(traceOf(world.exit.stdout), expected);
   });
+
+function traceOf(stdout) {
+  return stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((event) => ({ event }));
+}
 
 function exited(code) {
   return ({ stdout, stderr }) => ({ code, stdout, stderr });

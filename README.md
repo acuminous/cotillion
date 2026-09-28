@@ -276,6 +276,12 @@ A component which exceeds its own limit is treated as a failure. Its failed even
 system.exit(1);
 ```
 
+If there is nothing to stop, because the system never started, has already stopped, or its start failed and the stop which follows has finished, `exit` does not stop it again: the process exits without announcing a stop. So exiting from the rejection of `start()` reports the one stop the failure caused:
+
+```ts
+await system.start().catch(() => system.exit(1));
+```
+
 ## Signals
 
 `system.exitOn(...signals)` calls `exit()` when the process receives any of the named signals, so the system stops and the process exits with code 0 if the stop succeeded and 1 if it failed.

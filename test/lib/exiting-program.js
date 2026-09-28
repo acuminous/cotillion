@@ -30,6 +30,10 @@ const unbind = system.exitOn('shutdown', 'SIGTERM');
 
 if (behaviour === 'unbound') unbind();
 
+const insteadOfStarting = {
+  'exit-without-starting': exit,
+};
+
 const whileStarting = {
   'exit-while-starting': exit,
 };
@@ -41,13 +45,22 @@ const afterStart = {
   'component-fails': failThenRestart,
   exit,
   'exit-after-setting-exit-code': setExitCodeThenExit,
+  'exit-after-stopping': stopThenExit,
 };
 
-const starting = system.start();
+const afterFailedStart = {
+  'exit-when-start-fails': exit,
+};
+
+const starting = (insteadOfStarting[behaviour] ?? startSystem)();
 
 whileStarting[behaviour]?.();
 
-starting.then(afterStart[behaviour]);
+starting.then(afterStart[behaviour], afterFailedStart[behaviour]);
+
+function startSystem() {
+  return system.start();
+}
 
 function signal() {
   process.emit('shutdown');
@@ -58,13 +71,20 @@ function terminate() {
 }
 
 function exit() {
-  system.exit(exitCode);
+  return system.exit(exitCode);
 }
 
 function setExitCodeThenExit() {
   process.exitCode = 5;
   system.exit();
 }
+
+async function stopThenExit() {
+  await system.stop().catch(alreadyAnnounced);
+  system.exit(exitCode);
+}
+
+function alreadyAnnounced() {}
 
 async function stopAndSurvive() {
   process.emit('shutdown');
